@@ -5,7 +5,7 @@
 
 int64_t current_ts = 0;
 // Time slices size in microseconds
-const int INCREMENTS=10;
+const int INCREMENTS=1;
 
 typedef struct Winch
 {
@@ -67,19 +67,22 @@ int main(int argc, char** argv){
 		init_winch(&winches[i]);
 	}
 
-    if(argc<3) return 0;
+    if(argc<num_winches+2) return 0;
+    
+    int max_time = atoi(argv[1]);
 
     for(int i=0;i<num_winches;i++){
 		Winch* w = &winches[i];
-		int speed = atoi(argv[i+1]);
+		int speed = atoi(argv[i+2]);
 		w->speed = abs(speed);
 		if(speed>0) w->direction=1;
 		else w->direction=0;
 		set_direction(w);
 	}
 	
-
-	while(1){
+	//printf("%lld\n", current_ts);
+	while(current_ts<max_time*1000000){	
+		//printf("%lld\n", current_ts);
 		for(int i=0;i<num_winches;i++){
 			Winch* w = &winches[i];
 			if(w->speed>0){
@@ -88,8 +91,8 @@ int main(int argc, char** argv){
 					w->last_pulse=current_ts;
 				}
 			}
-			current_ts+= INCREMENTS;
-			delayMicroseconds(INCREMENTS);
 		}
+		current_ts+= INCREMENTS;
+		delayMicroseconds(INCREMENTS);
 	}
 }
