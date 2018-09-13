@@ -57,11 +57,13 @@ void switch_pulse_state(Winch* w){
 int main(int argc, char** argv){
     wiringPiSetup();
 
-	int num_winches=2;
+	int num_winches=4;
     Winch* winches = (Winch*)(malloc(sizeof(Winch)*2));
     
     winches[0] = (Winch){.dir_pin=0, .pulse_pin=2};
 	winches[1] = (Winch){.dir_pin=21, .pulse_pin=3};
+	winches[2] = (Winch){.dir_pin=22, .pulse_pin=23};
+	winches[3] = (Winch){.dir_pin=24, .pulse_pin=25};
     
     for(int i=0;i<num_winches;i++){
 		init_winch(&winches[i]);
