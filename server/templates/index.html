@@ -1,0 +1,34 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+
+function post(url, param) {
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", url, true);
+
+	//Send the proper header information along with the request
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+
+	xhr.send(param);
+}
+</script>
+
+<style>
+div.button {font-size: 32px; background-color: lightgray; }
+</style>
+
+<title>Wirebot debug control</title>
+<H1>Wirebot debug control</H1>
+<select name='speed'> 
+	<option value="1000" selected="selected">Slow (1000)</option>
+	<option value="500" selected="selected">Medium (500)</option>
+	<option value="200" selected="selected">Fast (200)</option>
+	<option value="100" selected="selected">Very fast (100)</option>
+</select>
+{% for i in range(1,5) %}
+<h2>MOTOR {{i}} </h2>
+	<div class='button' onClick='post("/motors/{{i}}/roll", document.getElementById("speed").selectedIndex)'>ROLL</div>
+	&nbsp;
+	<div class='button' onClick='post("/motors/{{i}}/unroll", document.getElementById("speed").selectedIndex)'>UNROLL</div>
+
+<div>----</div>
+{% endfor %}
