@@ -1,5 +1,12 @@
 int run = 0;
 
+int last_switch[] = {0,0,0,0};
+int current_state[] = { LOW, LOW, LOW, LOW};
+int cycle_length[]={0, 0, 0, 0};
+
+int current_time=0;
+const int INTERVAL=10;
+const int RESET_INTERVAL=10000000;
 
 void setup() {
   pinMode(13, OUTPUT);
@@ -24,22 +31,44 @@ void all_dirs(int dir){
 
 void loop() {
   if(run==1){
-    digitalWrite(13, HIGH);
-    digitalWrite(11, HIGH);
-    digitalWrite(9, HIGH);
-    digitalWrite(7, HIGH);
-    delayMicroseconds(100);
-    digitalWrite(13, LOW);
-    digitalWrite(11, LOW);
-    digitalWrite(9, LOW);
-    digitalWrite(7, LOW);
-    delayMicroseconds(100);  
+    if(current_time>RESET_INTERVAL){
+      
+          for(int i=0;i<4;i++){
+            last_switch[i] -= current_time;
+      }
+      current_time = 0;
+    }
+    
+    for(int i=0;i<4;i++){
+      if(cycle_length[i]==0) continue;
+      if(last_switch[i]+cycle_length[i]<current_time){
+        if(current_state[i]==LOW) current_state[i]=HIGH; else current_state[i]=LOW;
+        digitalWrite(13-i*2, current_state[i]);
+        last_switch[i]=current_time;
+      }
+    }
+    
+    current_time+=INTERVAL;
   }
+  delayMicroseconds(INTERVAL);
+
+
   if(Serial.available() > 0){
     char c = Serial.read();
     Serial.println(c);
-    if(c=='q') { run=0; }
-    if(c=='a') { run=1; all_dirs(HIGH);}
-    if(c=='z') { run=1; all_dirs(LOW);} 
+    if(c=='s') { run=0; }
+    if(c=='g') { run=1; }
+    if(c=='m') { 
+      int mnum = Serial.parseInt() -1;
+      int mspeed = Serial.parseInt();
+      if(mspeed<0){
+        cycle_length[mnum] = -mspeed;
+        digitalWrite(12-mnum*2, LOW);
+      }
+      else{
+        cycle_length[mnum] = mspeed;
+        digitalWrite(12-mnum*2, HIGH);
+      }
+    } 
   }
 }
