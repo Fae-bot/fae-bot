@@ -1,13 +1,14 @@
 import subprocess
 
-from flask import Flask
+from flask import Flask, render_template_string
 app = Flask(__name__)
 
 numMotors=4
 
 @app.route('/')
 def index():
-    return """
+    return  render_template_string("""
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
 
 function post(url) {
@@ -21,26 +22,31 @@ function post(url) {
 }
 </script>
 
-
+<style>
+div {font-size: 32px; color:green;}
+</style>
 
 <title>Wirebot debug control</title>
 <H1>Wirebot debug control</H1>
-<div>MOTOR 1
-	<div onClick='post("/motors/1/roll")'>ROLL</div>
-	<div onClick='post("/motors/1/unroll")'>UNROLL</div>
+{% for i in range(1,5) %}
+<div>MOTOR {{i}}
+	<div onClick='post("/motors/{{i}}/roll")'>ROLL</div>
+	<div onClick='post("/motors/{{i}}/unroll")'>UNROLL</div>
 </div>
-<hr>
+<div>----</div>
+{% endfor %}""")
+opop="""
 
 <div>MOTOR 2
 	<div onClick='post("/motors/2/roll")'>ROLL</div>
 	<div onClick='post("/motors/2/unroll")'>UNROLL</div>
 </div>
-<hr>
+<div>----</div>
 <div>MOTOR 3
 	<div onClick='post("/motors/3/roll")'>ROLL</div>
 	<div onClick='post("/motors/3/unroll")'>UNROLL</div>
 </div>
-<hr>
+<div>----</div>
 <div>MOTOR 4
 	<div onClick='post("/motors/4/roll")'>ROLL</div>
 	<div onClick='post("/motors/4/unroll")'>UNROLL</div>
@@ -63,4 +69,4 @@ def unrollMotor(mid):
 	return ""
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0")
+    app.run(host="0.0.0.0", debug = True)
