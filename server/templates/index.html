@@ -13,7 +13,8 @@ function post(url) {
 </script>
 
 <style>
-div.button {font-size: 32px; background-color: lightgray; }
+div.motor-console {text-align:center; width:45%; position: relative; float:left; border-style:solid; border-width:1px;}
+div.button {font-size: 32px; background-color: lightgray; width:95%;}
 div.button-grid {text-align:center; width:90%; font-size: 32px; background-color: lightgray; }
 </style>
 
@@ -31,14 +32,17 @@ div.button-grid {text-align:center; width:90%; font-size: 32px; background-color
 	<option value="20">20 sec</option>
 	<option value="60">1 min</option>
 </select>
-{% for i in range(1,5) %}
-<h2>MOTOR {{i}} </h2>
-	<div class='button' onClick='post("/motors/{{i}}/roll")'>ROLL</div>
-	&nbsp;
-	<div class='button' onClick='post("/motors/{{i}}/unroll")'>UNROLL</div>
+<div>
+	{% for i in (3,4,1,2) %}
+	<div class='motor-console'>
+		<h2>MOTOR {{i}} </h2>
+		<div class='button' onClick='post("/motors/{{i}}/roll")'>ROLL</div>
+		&nbsp;
+		<div class='button' onClick='post("/motors/{{i}}/unroll")'>UNROLL</div>
+	</div>
+	{% endfor %}
+</div>
 
-<div>----</div>
-{% endfor %}
 
 <table width=100%>
 	<tr>

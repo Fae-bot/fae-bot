@@ -68,7 +68,7 @@ def direction(direc):
 		motors(-speed, -speed, -speed, -speed, timev)
 	if direc == "down":
 		motors(speed, speed, speed, speed, timev)		
-		
+	print timev
 	return ""
 
 if __name__ == '__main__':
