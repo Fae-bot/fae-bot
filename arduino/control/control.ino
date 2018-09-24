@@ -3,8 +3,13 @@ int run = 0;
 int last_switch[] = {0,0,0,0};
 int current_state[] = { LOW, LOW, LOW, LOW};
 int cycle_length[]={0, 0, 0, 0};
+int positions[] ={0,0,0,0};
+int directions[] = {1,1,1,1};
+int targets[16*4];
 
 int current_time=0;
+int target_id=-1;
+const int NUM_WINCHES = 4;
 const int INTERVAL=10;
 const int RESET_INTERVAL=10000000;
 
@@ -45,30 +50,77 @@ void loop() {
         if(current_state[i]==LOW) current_state[i]=HIGH; else current_state[i]=LOW;
         digitalWrite(13-i*2, current_state[i]);
         last_switch[i]=current_time;
+        positions[i] += directions[i];
       }
     }
     
     current_time+=INTERVAL;
+    if(target_id>-1 && target_id<16){
+      for(int i=0;i<NUM_WINCHES;i++){
+        if(targets[target_id*4+i]>positions[i]){
+          directions[i]=1;
+          digitalWrite(12-i*2, HIGH);
+        }
+        if(targets[target_id*4+i]<positions[i]){
+          directions[i]=-1;
+          digitalWrite(12-i*2, LOW);
+        }
+        if(targets[target_id*4+i]==positions[i]){
+          cycle_length[i]=0;
+        }
+      }
+    }
   }
   delayMicroseconds(INTERVAL);
 
 
   if(Serial.available() > 0){
     char c = Serial.read();
-    Serial.println(c);
-    if(c=='s') { run=0; }
-    if(c=='g') { run=1; }
-    if(c=='m') { 
+    if(c=='s') { run=0; target_id=-1; }  // Stop
+    if(c=='g') { run=1; target_id=-1; }  // Go
+    if(c=='m') {           // Motor <ID> <speed>
       int mnum = Serial.parseInt() -1;
       int mspeed = Serial.parseInt();
       if(mspeed<0){
         cycle_length[mnum] = -mspeed;
         digitalWrite(12-mnum*2, LOW);
+        directions[mnum]=-1;
       }
       else{
         cycle_length[mnum] = mspeed;
         digitalWrite(12-mnum*2, HIGH);
+        directions[mnum]=1;        
       }
-    } 
+    }
+    if(c=='z') {          // Zero
+      for(int i=0;i<NUM_WINCHES;i++){
+        positions[i]=0;
+      }
+    }
+    if(c=='p') {          // Position
+      for(int i=0;i<NUM_WINCHES;i++){
+        Serial.println(positions[i]);
+      }
+    }
+    if(c=='c') {          // Check target
+      int tnum = Serial.parseInt();
+      for(int i=0;i<NUM_WINCHES;i++){
+        Serial.println(targets[tnum*4+i]);
+      }
+    }
+    if(c=='n') {          // New target <ID>
+      int tnum = Serial.parseInt();
+      targets[tnum*4] = positions[0];
+      targets[tnum*4+1] = positions[1];
+      targets[tnum*4+2] = positions[2];
+      targets[tnum*4+3] = positions[3];
+  }
+  if(c=='a') {           // Advance to target <ID>
+      target_id = Serial.parseInt();
+      for(int i=0;i<NUM_WINCHES;i++){
+          cycle_length[i] = 200;
+      }
+      run = 1;
+    }
   }
 }

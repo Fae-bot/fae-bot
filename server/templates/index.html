@@ -21,16 +21,21 @@ div.button-grid {text-align:center; width:90%; font-size: 32px; background-color
 <title>Wirebot debug control</title>
 <H1>Wirebot debug control</H1>
 <select id='speed'> 
-	<option value="1000" selected="selected">Slow (1000)</option>
-	<option value="500">Medium (500)</option>
-	<option value="200">Fast (200)</option>
-	<option value="100">Very fast (100)</option>
+	<option value="500" selected="selected">Slow (500)</option>
+	<option value="200">Medium (200)</option>
+	<option value="100">Fast (100)</option>
+	<option value="20">Very fast (20)</option>
 </select>
 <select id='time'> 
 	<option value="1" selected="selected">1 sec</option>
 	<option value="5">5 sec</option>
 	<option value="20">20 sec</option>
 	<option value="60">1 min</option>
+</select>
+<select id='target_id'> 
+{% for i in range(16) %}
+	<option value="{{i}}">target #{{i}}</option>
+{% endfor %}
 </select>
 <div>
 	{% for i in (3,4,1,2) %}
@@ -63,5 +68,9 @@ div.button-grid {text-align:center; width:90%; font-size: 32px; background-color
 		<td><div onClick='post("direction/down")' class='button-grid'>DOWN</div></td>
 	</tr>
 </table>
-
+<div class='motor-console'>
+		<div class='button' onClick='post("/set_target/"+document.getElementById("target_id").value)'>SET TARGET</div>
+		&nbsp;
+		<div class='button' onClick='post("/go_target/"+document.getElementById("target_id").value)'>GO TARGET</div>
+</div>
 

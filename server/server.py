@@ -50,6 +50,18 @@ def stopMotors():
 	ser.write("s\n")
 	return ""
 
+@app.route('/set_target/<tid>',methods=['POST'])
+def set_target(tid):
+	global ser
+	ser.write("n "+str(tid)+"\n")
+	return ""
+
+@app.route('/go_target/<tid>',methods=['POST'])
+def go_target(tid):
+	global ser
+	ser.write("a "+str(tid)+"\n")
+	return ""
+
 @app.route('/direction/<direc>',methods=['POST'])
 def direction(direc):
 	global control_process
