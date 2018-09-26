@@ -59,7 +59,8 @@ def set_target(tid):
 @app.route('/go_target/<tid>',methods=['POST'])
 def go_target(tid):
 	global ser
-	ser.write("a "+str(tid)+"\n")
+	speed = request.values.get('speed')
+	ser.write("a "+str(tid)+" " + str(speed)+"\n")
 	return ""
 
 @app.route('/direction/<direc>',methods=['POST'])

@@ -115,10 +115,11 @@ void loop() {
       targets[tnum*4+2] = positions[2];
       targets[tnum*4+3] = positions[3];
   }
-  if(c=='a') {           // Advance to target <ID>
+  if(c=='a') {           // Advance to target <ID> <spped>
       target_id = Serial.parseInt();
+      int tspeed = Serial.parseInt();      
       for(int i=0;i<NUM_WINCHES;i++){
-          cycle_length[i] = 200;
+          cycle_length[i] = tspeed;
       }
       run = 1;
     }

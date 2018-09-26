@@ -14,7 +14,8 @@ function post(url) {
 
 <style>
 div.motor-console {text-align:center; width:45%; position: relative; float:left; border-style:solid; border-width:1px;}
-div.button {font-size: 32px; background-color: lightgray; width:95%;}
+div.button {font-size: 32px; background-color: lightgray; }
+span.button {font-size: 32px; background-color: lightgray; }
 div.button-grid {text-align:center; width:90%; font-size: 32px; background-color: lightgray; }
 </style>
 
@@ -68,9 +69,22 @@ div.button-grid {text-align:center; width:90%; font-size: 32px; background-color
 		<td><div onClick='post("direction/down")' class='button-grid'>DOWN</div></td>
 	</tr>
 </table>
-<div class='motor-console'>
-		<div class='button' onClick='post("/set_target/"+document.getElementById("target_id").value)'>SET TARGET</div>
-		&nbsp;
-		<div class='button' onClick='post("/go_target/"+document.getElementById("target_id").value)'>GO TARGET</div>
+<div class=''>
+		<span style="position: relative; float:left; ">
+			<span class='button' onClick='post("/set_target/"+document.getElementById("target_id").value)'>SET TARGET</div>&nbsp;
+			<span class='button' onClick='post("/set_target/0")'>&nbsp;&nbsp;0&nbsp;&nbsp;</span>
+			<span class='button' onClick='post("/set_target/1")'>&nbsp;&nbsp;1&nbsp;&nbsp;</span>
+			<span class='button' onClick='post("/set_target/2")'>&nbsp;&nbsp;2&nbsp;&nbsp;</span>
+		</span>
+</div>		
+&nbsp;
+<div style=''>
+		
+		<span style="position: relative; float:left; ">
+			<span class='button' onClick='post("/go_target/"+document.getElementById("target_id").value)'>GO TARGET</div>&nbsp;
+			<span class='button' onClick='post("/go_target/0")'>&nbsp;&nbsp;0&nbsp;&nbsp;</span>
+			<span class='button' onClick='post("/go_target/1")'>&nbsp;&nbsp;1&nbsp;&nbsp;</span>
+			<span class='button' onClick='post("/go_target/2")'>&nbsp;&nbsp;2&nbsp;&nbsp;</span>
+		</span>
 </div>
 
