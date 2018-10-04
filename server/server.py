@@ -6,6 +6,7 @@ app = Flask(__name__)
 
 numMotors=4
 ser = serial.Serial("/dev/ttyACM0")
+targets = [0,0,0,0]*16
 
 def motors(m1, m2, m3, m4, dur):
 	global ser
@@ -52,7 +53,7 @@ def stopMotors():
 
 @app.route('/set_target/<tid>',methods=['POST'])
 def set_target(tid):
-	global ser
+	global ser, targets
 	ser.write("n "+str(tid)+"\n")
 	return ""
 
@@ -61,6 +62,13 @@ def go_target(tid):
 	global ser
 	speed = request.values.get('speed')
 	ser.write("a "+str(tid)+" " + str(speed)+"\n")
+	return ""
+
+@app.route('/cycle',methods=['POST'])
+def cycle():
+	global ser
+	speed = request.values.get('speed')
+	ser.write("y "+str(speed)+"\n")
 	return ""
 
 @app.route('/direction/<direc>',methods=['POST'])
