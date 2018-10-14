@@ -12,7 +12,8 @@ void setup() {
 }
 
 void loop() {
-    myservo.write(pos);              
+    //Serial.println(pos);
+    myservo.write(pos);    
     delay(15);                       
   if (Serial.available() > 0) {
     int value = Serial.parseInt();
