@@ -1,0 +1,31 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+
+function post(url) {
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", url, true);
+
+	//Send the proper header information along with the request
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+
+	xhr.send();
+}
+</script>
+
+<style>
+div.motor-console {text-align:center; width:45%; position: relative; float:left; border-style:solid; border-width:1px;}
+div.button {font-size: 32px; background-color: lightgray; }
+span.button {font-size: 32px; background-color: lightgray; }
+div.button-grid {text-align:center; width:90%; font-size: 32px; background-color: lightgray; }
+</style>
+
+<title>Wirebot Claw control</title>
+<H1>Wirebot Claw control</H1>
+<div>
+	<div class='motor-console'>
+		<h2>CLAW</h2>
+		<div class='button' onClick='post("/claw/10")'>OPEN</div>
+		&nbsp;
+		<div class='button' onClick='post("/claw/65")'>CLOSE</div>
+	</div>
+</div>
