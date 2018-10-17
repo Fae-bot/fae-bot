@@ -13,7 +13,9 @@ function post(url) {
 </script>
 
 <style>
-div.motor-console {text-align:center; width:45%; position: relative; float:left; border-style:solid; border-width:1px;}
+div {font-size: 32px;}
+div.motor-console {text-align:center; width:45%; position: relative; float:left; border-style:solid; border-width:1px;margin:2px;}
+span.motor-console {text-align:center; width:99%; position: relative; float:left; border-style:solid; border-width:1px; margin:2px;}
 div.button {font-size: 32px; background-color: lightgray; }
 span.button {font-size: 32px; background-color: lightgray; }
 div.button-grid {text-align:center; width:90%; font-size: 32px; background-color: lightgray; }
@@ -41,9 +43,8 @@ div.button-grid {text-align:center; width:90%; font-size: 32px; background-color
 <div>
 	{% for i in (3,4,1,2) %}
 	<div class='motor-console'>
-		<h2>MOTOR {{i}} </h2>
+		MOTOR {{i}}
 		<div class='button' onClick='post("/motors/{{i}}/roll")'>ROLL</div>
-		&nbsp;
 		<div class='button' onClick='post("/motors/{{i}}/unroll")'>UNROLL</div>
 	</div>
 	{% endfor %}
@@ -69,6 +70,16 @@ div.button-grid {text-align:center; width:90%; font-size: 32px; background-color
 		<td><div onClick='post("direction/down")' class='button-grid'>DOWN</div></td>
 	</tr>
 </table>
+<div>
+	<span class='motor-console'>
+		CLAW:
+		<span class='button' onClick='post("http://192.168.11.100:5001/claw/10")'>OPEN</span>
+		&nbsp;
+		<span class='button' onClick='post("http://192.168.11.100:5001/claw/65")'>CLOSE</span>
+	</span>
+</div>
+<br/>
+
 <div class=''>
 		<span style="position: relative; float:left; ">
 			<span class='button' onClick='post("/set_target/"+document.getElementById("target_id").value)'>SET TARGET</div>&nbsp;
