@@ -5,7 +5,22 @@ from flask import Flask, render_template_string, render_template, request
 app = Flask(__name__)
 
 numMotors=4
-ser = serial.Serial("/dev/ttyACM0")
+ind=0
+global ser
+ser = None
+while ser==None:
+	try:
+		ser = serial.Serial("/dev/ttyACM"+str(ind))
+		ser.detDTR(False)
+		sleep(0.5)
+		ser.open()
+		
+	except:
+		print("Could not connect to /dev/ttyUSB"+str(ind)+", try again in 1 second")
+		ind+=1
+		ind = ind % 8
+		sleep(1)
+		
 targets = [0,0,0,0]*16
 
 def motors(m1, m2, m3, m4, dur):
@@ -77,6 +92,14 @@ def direction(direc):
 	speed = int(request.values.get('speed'))
 	timev = float(request.values.get('time'))
 	
+	if direc == "n":
+		motors(speed, speed, -speed, -speed, timev)
+	if direc == "s":
+		motors(-speed, -speed, speed, speed, timev)
+	if direc == "w":
+		motors(-speed, speed, -speed, speed, timev)
+	if direc == "e":
+		motors(speed, -speed, speed, -speed, timev)
 	if direc == "nw":
 		motors(0, speed, -speed, 0, timev)
 	if direc == "ne":
@@ -96,5 +119,4 @@ if __name__ == '__main__':
 	try:
 		app.run(host="0.0.0.0", debug = True, threaded=True)
 	finally:
-		global ser
 		ser.close()
