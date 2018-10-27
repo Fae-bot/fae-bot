@@ -1,0 +1,109 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+
+function post(url) {
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", url, true);
+
+	//Send the proper header information along with the request
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+
+	xhr.send("speed="+document.getElementById("speed").value+"&time="+document.getElementById("time").value);
+}
+</script>
+
+<style>
+div {font-size: 32px;}
+div.motor-console {text-align:center; width:45%; position: relative; float:left; border-style:solid; border-width:1px;margin:2px;}
+span.motor-console {text-align:center; width:99%; position: relative; float:left; border-style:solid; border-width:1px; margin:2px;}
+div.button {font-size: 32px; background-color: lightgray; }
+span.button {font-size: 32px; background-color: lightgray; }
+div.button-grid {text-align:center; width:90%; font-size: 32px; background-color: lightgray; }
+</style>
+
+<title>Wirebot debug control</title>
+<H1>Wirebot debug control</H1>
+<select id='speed'> 
+	<option value="500" selected="selected">Slow (500)</option>
+	<option value="200">Medium (200)</option>
+	<option value="100">Fast (100)</option>
+	<option value="20">Very fast (20)</option>
+</select>
+<select id='time'> 
+	<option value="1" selected="selected">1 sec</option>
+	<option value="5">5 sec</option>
+	<option value="20">20 sec</option>
+	<option value="60">1 min</option>
+</select>
+<select id='target_id'> 
+{% for i in range(16) %}
+	<option value="{{i}}">target #{{i}}</option>
+{% endfor %}
+</select>
+<div>
+	{% for i in (3,4,1,2) %}
+	<div class='motor-console'>
+		MOTOR {{i}}
+		<div class='button' onClick='post("/motors/{{i}}/roll")'>ROLL</div>
+		<div class='button' onClick='post("/motors/{{i}}/unroll")'>UNROLL</div>
+	</div>
+	{% endfor %}
+</div>
+
+
+<table width=100%>
+	<tr>
+		<td><div onClick='post("direction/nw")' class='button-grid'>&#8662;</div></td>
+		<td><div onClick='post("direction/n")' class='button-grid'>&#x21D1;</div></td>
+		<td><div onClick='post("direction/ne")' class='button-grid'>&#x21D7;</div></td>
+		<td><div onClick='post("direction/up")' class='button-grid'>UP</div></td>
+	</tr>
+	<tr>
+		<td><div onClick='post("direction/w")' class='button-grid'>&#x21D0;</div></td>
+		<td><div onClick='post("stop")' class='button-grid'>X</div></td>
+		<td><div onClick='post("direction/e")' class='button-grid'>&#x21D2;</div></td>
+	</tr>
+	<tr>
+		<td><div onClick='post("direction/sw")' class='button-grid'>&#x21D9;</div></td>
+		<td><div onClick='post("direction/s")' class='button-grid'>&#x21D3;</div></td>
+		<td><div onClick='post("direction/se")' class='button-grid'>&#x21D8;</div></td>
+		<td><div onClick='post("direction/down")' class='button-grid'>DOWN</div></td>
+	</tr>
+</table>
+<div>
+	<span class='motor-console'>
+		CLAW:
+		<span class='button' onClick='post("http://192.168.11.100:5001/claw/10")'>OPEN</span>
+		&nbsp;
+		<span class='button' onClick='post("http://192.168.11.100:5001/claw/65")'>CLOSE</span>
+	</span>
+</div>
+<br/>
+
+<div class=''>
+		<span style="position: relative; float:left; ">
+			<span class='button' onClick='post("/set_target/"+document.getElementById("target_id").value)'>SET TARGET</div>&nbsp;
+			<span class='button' onClick='post("/set_target/0")'>&nbsp;&nbsp;0&nbsp;&nbsp;</span>
+			<span class='button' onClick='post("/set_target/1")'>&nbsp;&nbsp;1&nbsp;&nbsp;</span>
+			<span class='button' onClick='post("/set_target/2")'>&nbsp;&nbsp;2&nbsp;&nbsp;</span>
+			<span class='button' onClick='post("/set_target/3")'>&nbsp;&nbsp;3&nbsp;&nbsp;</span>
+		</span>
+</div>		
+&nbsp;
+<div style=''>
+		
+		<span style="position: relative; float:left; ">
+			<span class='button' onClick='post("/go_target/"+document.getElementById("target_id").value)'>GO TARGET</div>&nbsp;
+			<span class='button' onClick='post("/go_target/0")'>&nbsp;&nbsp;0&nbsp;&nbsp;</span>
+			<span class='button' onClick='post("/go_target/1")'>&nbsp;&nbsp;1&nbsp;&nbsp;</span>
+			<span class='button' onClick='post("/go_target/2")'>&nbsp;&nbsp;2&nbsp;&nbsp;</span>
+			<span class='button' onClick='post("/go_target/3")'>&nbsp;&nbsp;3&nbsp;&nbsp;</span>
+		</span>
+</div>
+<div style=''>
+		
+		<span style="position: relative; float:left; ">
+			<span class='button' onClick='post("/cycle")'>CYCLE</div>&nbsp;
+		</span>
+</div>
+
