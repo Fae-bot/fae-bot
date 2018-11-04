@@ -1,6 +1,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
 
+var forcerefresh = 0;
+function refresh_image() {
+  document.getElementById("camera").src="/camera?refresh="+forcerefresh;
+  forcerefresh=forcerefresh+1;
+}
+
 function post(url) {
 	var xhr = new XMLHttpRequest();
 	xhr.open("POST", url, true);
@@ -73,9 +79,9 @@ div.button-grid {text-align:center; width:90%; font-size: 32px; background-color
 <div>
 	<span class='motor-console'>
 		CLAW:
-		<span class='button' onClick='post("http://192.168.11.100:5001/claw/10")'>OPEN</span>
+		<span class='button' onClick='post("http://192.168.44.2:5001/claw/10")'>OPEN</span>
 		&nbsp;
-		<span class='button' onClick='post("http://192.168.11.100:5001/claw/65")'>CLOSE</span>
+		<span class='button' onClick='post("http://192.168.44.2:5001/claw/65")'>CLOSE</span>
 	</span>
 </div>
 <br/>
@@ -106,4 +112,4 @@ div.button-grid {text-align:center; width:90%; font-size: 32px; background-color
 			<span class='button' onClick='post("/cycle")'>CYCLE</div>&nbsp;
 		</span>
 </div>
-
+<img src="/camera" onClick="refresh_image()" id="camera" >
