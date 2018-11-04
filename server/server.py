@@ -8,15 +8,22 @@ numMotors=4
 ind=0
 global ser
 ser = None
+devices = list()
+for x in range(10):
+	devices.append("/dev/ttyACM" + str(x)) 
+	devices.append("/dev/ttyUSB" + str(x))
+
+ind = 0
 while ser==None:
+	dev = devices[ind%len(devices)]
 	try:
-		ser = serial.Serial("/dev/ttyACM"+str(ind))
+		ser = serial.Serial(dev)
 		ser.detDTR(False)
 		sleep(0.5)
 		ser.open()
 		
 	except:
-		print("Could not connect to /dev/ttyUSB"+str(ind)+", try again in 1 second")
+		print("Could not connect to "+str(dev)+", try again in 1 second")
 		ind+=1
 		ind = ind % 8
 		sleep(1)
@@ -117,6 +124,6 @@ def direction(direc):
 
 if __name__ == '__main__':
 	try:
-		app.run(host="0.0.0.0", debug = True, threaded=True)
+		app.run(host="0.0.0.0", port = 80, debug = True, threaded=True)
 	finally:
 		ser.close()
