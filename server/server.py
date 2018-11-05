@@ -123,15 +123,6 @@ def direction(direc):
 	print timev
 	return ""
 
-@app.route('/camera',methods=['GET'])
-def camera():
-	subprocess.call(["fswebcam", "-r", "640x480", "--no-banner", "--no-overlay", "--no-underlay", "--save", "/tmp/image.jpg"])
-        try:
-            r = make_response(send_file("/tmp/image.jpg", mimetype='image/jpeg'))
-	    r.headers.set('Cache-Control', 'public, max-age=0, no-cache, no-store')
-	    return r
-        except:
-            return""
 
 
 

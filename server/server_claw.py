@@ -7,16 +7,22 @@ app = Flask(__name__)
 numMotors=4
 global ser
 ser=None
-ind=0
+devices = list()
+for x in range(10):
+	devices.append("/dev/ttyACM" + str(x)) 
+	devices.append("/dev/ttyUSB" + str(x))
+
+ind = 0
 while ser==None:
+	dev = devices[ind%len(devices)]
 	try:
-		ser = serial.Serial("/dev/ttyUSB"+str(ind), baudrate=57600)
+		ser = serial.Serial(dev, baudrate=57600)
 		ser.detDTR(False)
 		sleep(0.5)
 		ser.open()
 		
 	except:
-		print("Could not connect to /dev/ttyUSB"+str(ind)+", try again in 1 second")
+		print("Could not connect to "+str(dev)+", try again in 1 second")
 		ind+=1
 		ind = ind % 8
 		sleep(1)
@@ -57,6 +63,17 @@ def claw(val):
 				sleep(1)
 	
 	return ""
+
+@app.route('/camera',methods=['GET'])
+def camera():
+	subprocess.call(["fswebcam", "-r", "640x480", "--no-banner", "--no-overlay", "--no-underlay", "--save", "/tmp/image.jpg"])
+        try:
+            r = make_response(send_file("/tmp/image.jpg", mimetype='image/jpeg'))
+	    r.headers.set('Cache-Control', 'public, max-age=0, no-cache, no-store')
+	    return r
+        except:
+            return""
+
 
 if __name__ == '__main__':
 	try:

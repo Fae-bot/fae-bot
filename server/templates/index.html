@@ -3,7 +3,7 @@
 
 var forcerefresh = 0;
 function refresh_image() {
-  document.getElementById("camera").src="/camera?refresh="+forcerefresh;
+  document.getElementById("camera").src="http://192.168.44.2:5001/camera?refresh="+forcerefresh;
   forcerefresh=forcerefresh+1;
 }
 
@@ -112,4 +112,4 @@ div.button-grid {text-align:center; width:90%; font-size: 32px; background-color
 			<span class='button' onClick='post("/cycle")'>CYCLE</div>&nbsp;
 		</span>
 </div>
-<img src="/camera" onClick="refresh_image()" id="camera" >
+<img src="http://192.168.44.2:5001/camera" onClick="refresh_image()" id="camera" >
