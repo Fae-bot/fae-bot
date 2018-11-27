@@ -23,7 +23,7 @@ void setup() {
   pinMode(7, OUTPUT);
   pinMode(6, OUTPUT);
   digitalWrite(12, HIGH);
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 void all_dirs(int dir){
@@ -115,6 +115,7 @@ void loop() {
       targets[1] = w2;
       targets[2] = w3;
       targets[3] = w4;
+    }
   }
 }
 

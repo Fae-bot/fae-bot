@@ -1,4 +1,12 @@
+<!DOCTYPE html>
+<head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel="stylesheet" href="/static/range.css">
+	<title>Wirebot control</title>
+</head>
+<body>
+
     <script>
 
 var forcerefresh = 0;
@@ -14,38 +22,46 @@ function post(url) {
 	//Send the proper header information along with the request
 	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 
-	xhr.send("speed="+document.getElementById("speed").value+"&time="+document.getElementById("time").value);
+	xhr.send("stepsize="+stepSizeValue+"&speed="+speedValue);
 }
+
+var stepSizeValue = 0;
+var speedValue = 0;
+function updateValue() {
+	var multiplierStepSize = 50;
+	var multiplierSpeed = 5;
+	var thresholdSpeed = 5;
+
+	sliderSize = document.getElementById('stepSize');
+	labelSize = document.getElementById('stepSizeDisplay');
+	sliderSpeed = document.getElementById('speed');
+	labelSpeed = document.getElementById('speedDisplay');
+	stepSizeValue = sliderSize.value*multiplierStepSize;
+	speedValue = sliderSpeed.value;
+	if(speedValue > 100){
+		speedValue = 100 + (speedValue-100) * multiplierSpeed;
+	}
+
+	labelSize.innerHTML = 'Step size = '+stepSizeValue;
+	labelSpeed.innerHTML = 'Speed = '+speedValue;
+}
+window.onLoad =updateValue;
 </script>
 
 <style>
-div {font-size: 32px;}
+div {font-size: 32px;text-align:center;}
 div.motor-console {text-align:center; width:45%; position: relative; float:left; border-style:solid; border-width:1px;margin:2px;}
 span.motor-console {text-align:center; width:99%; position: relative; float:left; border-style:solid; border-width:1px; margin:2px;}
-div.button {font-size: 32px; background-color: lightgray; }
-span.button {font-size: 32px; background-color: lightgray; }
-div.button-grid {text-align:center; width:90%; font-size: 32px; background-color: lightgray; }
+.button {font-size: 32px; background-color: lightgray; text-align:center;}
+div.button-grid { width:90%; font-size: 32px; background-color: lightgray; }
+
+
 </style>
 
-<title>Wirebot debug control</title>
-<H1>Wirebot debug control</H1>
-<select id='speed'> 
-	<option value="500" selected="selected">Slow (500)</option>
-	<option value="200">Medium (200)</option>
-	<option value="100">Fast (100)</option>
-	<option value="20">Very fast (20)</option>
-</select>
-<select id='time'> 
-	<option value="1" selected="selected">1 sec</option>
-	<option value="5">5 sec</option>
-	<option value="20">20 sec</option>
-	<option value="60">1 min</option>
-</select>
-<select id='target_id'> 
-{% for i in range(16) %}
-	<option value="{{i}}">target #{{i}}</option>
-{% endfor %}
-</select>
+<div class="display-big" id="stepSizeDisplay">Step size = 150</div>
+<div><input id="stepSize" type="range" onmousemove="updateValue()"/></div>
+<div class="display-big" id="speedDisplay">Speed = 100</div>
+<div><input id="speed" type="range" onmousemove="updateValue()" max="200"/></div>
 <div>
 	{% for i in (3,4,1,2) %}
 	<div class='motor-console'>
@@ -87,29 +103,16 @@ div.button-grid {text-align:center; width:90%; font-size: 32px; background-color
 <br/>
 
 <div class=''>
-		<span style="position: relative; float:left; ">
-			<span class='button' onClick='post("/set_target/"+document.getElementById("target_id").value)'>SET TARGET</div>&nbsp;
-			<span class='button' onClick='post("/set_target/0")'>&nbsp;&nbsp;0&nbsp;&nbsp;</span>
-			<span class='button' onClick='post("/set_target/1")'>&nbsp;&nbsp;1&nbsp;&nbsp;</span>
-			<span class='button' onClick='post("/set_target/2")'>&nbsp;&nbsp;2&nbsp;&nbsp;</span>
-			<span class='button' onClick='post("/set_target/3")'>&nbsp;&nbsp;3&nbsp;&nbsp;</span>
-		</span>
-</div>		
-&nbsp;
-<div style=''>
-		
-		<span style="position: relative; float:left; ">
-			<span class='button' onClick='post("/go_target/"+document.getElementById("target_id").value)'>GO TARGET</div>&nbsp;
-			<span class='button' onClick='post("/go_target/0")'>&nbsp;&nbsp;0&nbsp;&nbsp;</span>
-			<span class='button' onClick='post("/go_target/1")'>&nbsp;&nbsp;1&nbsp;&nbsp;</span>
-			<span class='button' onClick='post("/go_target/2")'>&nbsp;&nbsp;2&nbsp;&nbsp;</span>
-			<span class='button' onClick='post("/go_target/3")'>&nbsp;&nbsp;3&nbsp;&nbsp;</span>
-		</span>
+	TARGETS
+	<table style="max-width:500px; width:100%">
+		{% for i in range(1,10) %}
+			<tr>
+				<td class='button' onClick='post("/set_target/{{i}}")'>SET</td>
+				<td>{{i}}</td>
+				<td class='button' onClick='post("/go_target/{{i}}")'>GO</td>
+			</tr>
+		{% endfor %}
+	</table>
 </div>
-<div style=''>
-		
-		<span style="position: relative; float:left; ">
-			<span class='button' onClick='post("/cycle")'>CYCLE</div>&nbsp;
-		</span>
-</div>
-<img src="/camera" onClick="refresh_image()" id="camera" >
+<!-- <img src="/camera" onClick="refresh_image()" id="camera" > -->
+</body>
