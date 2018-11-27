@@ -84,9 +84,9 @@ div.button-grid { width:90%; font-size: 32px; background-color: lightgray; }
 </style>
 
 <div class="display-big" id="stepSizeDisplay">Step size = 150</div>
-<div><input id="stepSize" type="range" onmousemove="updateValue()"/></div>
+<div><input id="stepSize" type="range" onmousemove="updateValue()" ontouchmove="updateValue()"/></div>
 <div class="display-big" id="speedDisplay">Speed = 100</div>
-<div><input id="speed" type="range" onmousemove="updateValue()" max="200"/></div>
+<div><input id="speed" type="range" onmousemove="updateValue()" ontouchmove="updateValue()" max="200"/></div>
 <div>
 	{% for i in (3,4,1,2) %}
 	<div class='motor-console'>
