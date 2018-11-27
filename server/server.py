@@ -1,13 +1,14 @@
 from time import sleep
 import serial
-import subprocess
+from math import sqrt
 
 from flask import Flask, render_template_string, render_template, request, send_file, make_response
 app = Flask(__name__,  static_url_path='/static')
 
+
 class Fae:
     def __init__(self):
-        self.numMotors=4
+        self.numMotors = 4
         self.targetPos = [0, 0, 0, 0]
         self.lastPos = [-1, -1, -1, -1]
 
@@ -20,16 +21,16 @@ class Fae:
         ser = None
         ind = 0
         while ser is None:
-            dev = devices[ind%len(devices)]
+            dev = devices[ind % len(devices)]
             try:
                 ser = serial.Serial(dev, baudrate=115200)
                 ser.setDTR(False)
                 sleep(0.5)
-                ser.open()
-
-            except serial.serialutil.SerialException:
+                #ser.open()
+            except serial.serialutil.SerialException as e:
+                #print(str(e))
                 print("Could not connect to "+str(dev)+", try again in 1 second")
-                ind+=1
+                ind += 1
                 ind = ind % 8
                 sleep(1)
         self.serial = ser
@@ -46,18 +47,22 @@ class Fae:
         self.serial.flush()
 
     def motors_speed(self, m1, m2, m3, m4):
-        self.serial.write("m 1 "+str(m1)+"\n")
-        self.serial.write("m 2 "+str(m2)+"\n")
-        self.serial.write("m 3 "+str(m3)+"\n")
-        self.serial.write("m 4 "+str(m4)+"\n")
+        cmd = "m 1 "+str(int(m1))+"\n"
+        cmd += "m 2 "+str(int(m2))+"\n"
+        cmd += "m 3 "+str(int(m3))+"\n"
+        cmd += "m 4 "+str(int(m4))+"\n"
+        print(cmd)
+        self.serial.write(cmd)
         self.serial.flush()
 
     def all_speeds(self, s):
-        self.motors_speed(s,s,s,s)
+        self.motors_speed(s, s, s, s)
 
     def target(self, t1, t2, t3, t4):
-        self.targetPos = [t1, t2, t3, t4]
-        self.serial.write("n "+str(t1)+" "+str(t2)+" "+str(t3)+" "+str(t4)+"\n")
+        self.targetPos = [int(t1), int(t2), int(t3), int(t4)]
+        cmd = "n "+str(int(t1))+" "+str(int(t2))+" "+str(int(t3))+" "+str(int(t4))+"\n"
+        self.serial.write(cmd)
+        print(cmd[:-1])
         self.serial.flush()
 
     def sync(self):
@@ -70,9 +75,9 @@ class Fae:
 
     def delta(self, d1, d2, d3, d4):
         self.sync()
-        self.target(self.lastPos[0] - d1, self.lastPos[1] - d2, self.lastPos[2] - d3, self.lastPos[3] - d4)
+        self.target(self.lastPos[0] + d1, self.lastPos[1] + d2, self.lastPos[2] + d3, self.lastPos[3] + d4)
 
-    def speed_given_time(self, ttt): # ttt = time to target, in milliseconds
+    def speed_given_time(self, ttt):  # ttt = time to target, in milliseconds
         self.sync()
         d = [self.targetPos[i] - self.lastPos[i] for i in range(self.numMotors)]
         speeds = [0] * self.numMotors
@@ -86,9 +91,13 @@ class Fae:
         d = [self.targetPos[i] - self.lastPos[i] for i in range(self.numMotors)]
         sq = 0
         for dd in d:
-            sq += dd**2
+            sq += float(dd**2)
+        sq = sqrt(sq)
         if sq != 0:
-            self.motors_speed(speed*d[0]/sq, speed*d[1]/sq, speed*d[2]/sq, speed*d[3]/sq)
+            self.motors_speed(float(speed)*d[0]/sq,
+                              float(speed)*d[1]/sq,
+                              float(speed)*d[2]/sq,
+                              float(speed)*d[3]/sq)
         else:
             self.motors_speed(0, 0, 0, 0)
 
@@ -111,7 +120,7 @@ def roll_motor(mid):
     args = [0]*fae.numMotors
     args[int(mid)-1] = - step_size
     fae.delta(*args)
-    fae.speed_given_time(step_size/speed)
+    fae.speed_given_speed(speed)
     fae.go()
     return ""
 
@@ -125,75 +134,88 @@ def unroll_motor(mid):
     args = [0] * fae.numMotors
     args[int(mid) - 1] = step_size
     fae.delta(*args)
-    fae.speed_given_time(step_size / speed)
+    fae.speed_given_speed(speed)
     fae.go()
     return ""
 
 
-@app.route('/stop',methods=['POST'])
+@app.route('/stop', methods=['POST'])
 def stop_all():
     global fae
     fae.stop()
     return ""
 
 
-@app.route('/set_target/<tid>',methods=['POST'])
+@app.route('/set_target/<tid>', methods=['POST'])
 def set_target(tid):
     global targets
     fae.sync()
-    targets[int(tid)] = fae.lastPos
-    return ""
+    print(targets)
+    targets[int(tid)] = list(fae.lastPos)
+    print(targets)
+    return " ".join([str(x) for x in fae.lastPos])
 
 
-@app.route('/go_target/<tid>',methods=['POST'])
+@app.route('/go_target/<tid>', methods=['POST'])
 def go_target(tid):
     global targets, fae
     fae.stop()
     speed = float(request.values.get('speed'))
+    print(tid)
+    print(targets)
     fae.target(*targets[int(tid)])
     fae.speed_given_speed(speed)
     fae.go()
+    print(targets)
     return ""
 
 
-@app.route('/direction/<direc>',methods=['POST'])
-def direction(direc):
+@app.route('/direction/<direction>', methods=['POST'])
+def move_direction(direction):
     global fae
     fae.stop()
     speed = float(request.values.get('speed'))
     step_size = float(request.values.get('stepsize'))
 
-    if direc == "n":
+    if direction == "n":
         fae.delta(step_size, step_size, -step_size, -step_size)
-    if direc == "s":
+    if direction == "s":
         fae.delta(-step_size, -step_size, step_size, step_size)
-    if direc == "w":
+    if direction == "w":
         fae.delta(-step_size, step_size, -step_size, step_size)
-    if direc == "e":
+    if direction == "e":
         fae.delta(step_size, -step_size, step_size, -step_size)
-    if direc == "nw":
+    if direction == "nw":
         fae.delta(0, step_size, -step_size, 0)
-    if direc == "ne":
+    if direction == "ne":
         fae.delta(step_size, 0, 0, -step_size)
-    if direc == "se":
+    if direction == "se":
         fae.delta(0, -step_size, step_size, 0)
-    if direc == "sw":
+    if direction == "sw":
         fae.delta(-step_size, 0, 0, step_size)
-    if direc == "up":
+    if direction == "up":
         fae.delta(-step_size, -step_size, -step_size, -step_size)
-    if direc == "down":
+    if direction == "down":
         fae.delta(step_size, step_size, step_size, step_size)
     fae.speed_given_speed(speed)
     fae.go()
     return ""
 
+
+@app.route('/position', methods=['GET', 'POST'])
+def get_position():
+    global fae
+    fae.sync()
+    return " ".join([str(x) for x in fae.lastPos])
+
+
 """@app.route('/camera',methods=['GET'])
 def camera():
-	subprocess.call(["fswebcam", "-r", "640x480", "--no-banner", "--no-overlay", "--no-underlay", "--save", "/tmp/image.jpg"])
+    subprocess.call(["fswebcam", "-r", "640x480", "--no-banner", "--no-overlay", "--no-underlay", "--save", "/tmp/image.jpg"])
         try:
             r = make_response(send_file("/tmp/image.jpg", mimetype='image/jpeg'))
-	    r.headers.set('Cache-Control', 'public, max-age=0, no-cache, no-store')
-	    return r
+        r.headers.set('Cache-Control', 'public, max-age=0, no-cache, no-store')
+        return r
         except:
             return""
 

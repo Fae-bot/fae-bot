@@ -101,6 +101,11 @@ void loop() {
         Serial.println(positions[i]);
       }
     }
+    if(c=='e') {          // Check speed
+      for(int i=0;i<NUM_WINCHES;i++){
+        Serial.println(cycle_length[i]);
+      }
+    }
     if(c=='c') {          // Check target
       for(int i=0;i<NUM_WINCHES;i++){
         Serial.println(targets[i]);

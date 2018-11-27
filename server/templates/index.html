@@ -18,15 +18,25 @@ function refresh_image() {
 function post(url) {
 	var xhr = new XMLHttpRequest();
 	xhr.open("POST", url, true);
-
-	//Send the proper header information along with the request
 	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-
 	xhr.send("stepsize="+stepSizeValue+"&speed="+speedValue);
 }
 
-var stepSizeValue = 0;
-var speedValue = 0;
+function set_target(i) {
+	var xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function() {
+		if (xhr.readyState === 4) {
+		  document.getElementById("targetPos"+i).innerHTML=xhr.response;
+		}
+	  }
+	xhr.open("POST", "/set_target/"+i, true);
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhr.send("stepsize="+stepSizeValue+"&speed="+speedValue);
+
+}
+
+var stepSizeValue;
+var speedValue;
 function updateValue() {
 	var multiplierStepSize = 50;
 	var multiplierSpeed = 5;
@@ -45,7 +55,22 @@ function updateValue() {
 	labelSize.innerHTML = 'Step size = '+stepSizeValue;
 	labelSpeed.innerHTML = 'Speed = '+speedValue;
 }
-window.onLoad =updateValue;
+
+function updateDebugPos(){
+	var xhr = new XMLHttpRequest();
+
+	xhr.onreadystatechange = function() {
+		if (xhr.readyState === 4) {
+		  document.getElementById("debugPos").innerHTML=xhr.response;
+		}
+	  }
+
+    xhr.open("GET", "/position", true);
+    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhr.send("");
+}
+
+window.onload = function(){ updateValue();};
 </script>
 
 <style>
@@ -54,7 +79,7 @@ div.motor-console {text-align:center; width:45%; position: relative; float:left;
 span.motor-console {text-align:center; width:99%; position: relative; float:left; border-style:solid; border-width:1px; margin:2px;}
 .button {font-size: 32px; background-color: lightgray; text-align:center;}
 div.button-grid { width:90%; font-size: 32px; background-color: lightgray; }
-
+.debug {font-size:12px;}
 
 </style>
 
@@ -84,6 +109,7 @@ div.button-grid { width:90%; font-size: 32px; background-color: lightgray; }
 		<td><div onClick='post("direction/w")' class='button-grid'>&#x21D0;</div></td>
 		<td><div onClick='post("stop")' class='button-grid'>X</div></td>
 		<td><div onClick='post("direction/e")' class='button-grid'>&#x21D2;</div></td>
+		<td><div id="debugPos">-</div></td>
 	</tr>
 	<tr>
 		<td><div onClick='post("direction/sw")' class='button-grid'>&#x21D9;</div></td>
@@ -105,14 +131,24 @@ div.button-grid { width:90%; font-size: 32px; background-color: lightgray; }
 <div class=''>
 	TARGETS
 	<table style="max-width:500px; width:100%">
-		{% for i in range(1,10) %}
+		{% for i in range(0,10) %}
 			<tr>
-				<td class='button' onClick='post("/set_target/{{i}}")'>SET</td>
+				<td class='button' onClick='set_target({{i}})'>SET</td>
 				<td>{{i}}</td>
 				<td class='button' onClick='post("/go_target/{{i}}")'>GO</td>
+				<td><div class="debug" id="targetPos{{i}}"></div></td>
 			</tr>
 		{% endfor %}
 	</table>
 </div>
+<div><label><input type="checkbox" id="debugCheckBox"
+				   onclick="
+				   if(checked){
+				   	 value = setInterval(updateDebugPos, document.getElementById('debugInterval').value);
+				   	 }
+				   else{
+				     clearInterval(value);
+				     }"
+>Debug</label> | Interval:<input type="text" id="debugInterval" value="1000"></div>
 <!-- <img src="/camera" onClick="refresh_image()" id="camera" > -->
 </body>
