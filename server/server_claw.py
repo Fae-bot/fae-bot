@@ -5,6 +5,7 @@ import subprocess
 from flask import Flask, render_template_string, render_template, request, make_response, send_file
 app = Flask(__name__)
 
+
 class FaeClaw:
     def __init__(self, skip=False):
         # Connect to the USB serial

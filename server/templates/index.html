@@ -9,7 +9,8 @@
 
     <script>
 
-var claw_url = "http://192.168.44.2:5001"
+//var claw_url = "http://192.168.44.2:5001"
+var claw_url = "http://0.0.0.0:5001"
 
 var forcerefresh = 0;
 function refresh_image() {
@@ -22,6 +23,13 @@ function post(url) {
 	xhr.open("POST", url, true);
 	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 	xhr.send("stepsize="+stepSizeValue+"&speed="+speedValue);
+}
+
+function postsimple(url) {
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", url, true);
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhr.send();
 }
 
 function moveClaw(pos){
@@ -85,6 +93,12 @@ function updateServo() {
 	document.getElementById("clawDisplay").innerHTML="Claw pos = "+servoPos;
 }
 
+var servoPos=90;
+function updateServo() {
+	servoPos = document.getElementById("clawPos").value;
+	document.getElementById("clawDisplay").innerHTML="Claw pos = "+servoPos;
+}
+
 window.onload = function(){ updateValue(); updateServo};
 </script>
 
@@ -136,9 +150,9 @@ div.button-grid { width:90%; font-size: 32px; background-color: lightgray; }
 <div>
 	<span class='motor-console'>
 		CLAW:
-		<span class='button' onClick='post("http://192.168.44.2:5001/claw/10")'>OPEN</span>
+		<span class='button' onClick='postsimple(claw_url+"/claw/go_open")'>OPEN</span>
 		&nbsp;
-		<span class='button' onClick='post("http://192.168.44.2:5001/claw/65")'>CLOSE</span>
+		<span class='button' onClick='postsimple(claw_url+"/claw/go_closed")'>CLOSE</span>
 	</span>
 </div>
 <br/>
@@ -166,13 +180,13 @@ div.button-grid { width:90%; font-size: 32px; background-color: lightgray; }
 				     }">
 	Debug</label> | Interval:<input type="text" id="debugInterval" value="1000"></div>
 <!-- <img src="/camera" onClick="refresh_image()" id="camera" > -->
-<span class='motor-console'>
-	<div class="display-big" id="clawDisplay">Claw pos = 90</div>
-	<div><input id="clawPos" type="range" onmousemove="updateServo()" ontouchmove="updateServo()" max="180"/></div>
-	<div><span class="button">TEST</span></div>
-	<span class="button">SET OPEN POS</span>
-	<span class="button">SET CLOSED POS</span>
+		<span class='motor-console'>
+			<div class="display-big" id="clawDisplay">Claw pos = 90</div>
+			<div><input id="clawPos" type="range" onmousemove="updateServo()" ontouchmove="updateServo()" max="180"/></div>
+			<div><span class="button" onClick='postsimple(claw_url+"/claw/"+servoPos)'>TEST</span></div>
+			<div class="button" onClick='postsimple(claw_url+"/claw/set_open/"+servoPos)'>SET OPEN POS</div>
+			<div class="button" onClick='postsimple(claw_url+"/claw/set_closed/"+servoPos)'>SET CLOSED POS</div>
 
-</span>
+		</span>
 
 </body>
