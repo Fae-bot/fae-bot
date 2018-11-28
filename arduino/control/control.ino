@@ -1,17 +1,21 @@
 int run = 0;
 
-int last_switch[] = {0,0,0,0};
+long last_switch[] = {0,0,0,0};
 int current_state[] = { LOW, LOW, LOW, LOW};
 int cycle_length[]={0, 0, 0, 0};
 long positions[] ={0,0,0,0};
 int directions[] = {1,1,1,1};
 int targets[4];
 
-int current_time=0;
+long current_time=0;
+int reset_counts=0;
+
+
+
 
 const int NUM_WINCHES = 4;
 const int INTERVAL=1;
-const int RESET_INTERVAL=10000000;
+const long RESET_INTERVAL=10000000;
 
 void setup() {
   pinMode(13, OUTPUT);
@@ -42,6 +46,7 @@ void loop() {
             last_switch[i] -= current_time;
       }
       current_time = 0;
+      reset_counts++;
     }
     
     for(int i=0;i<NUM_WINCHES;i++){
@@ -121,6 +126,10 @@ void loop() {
       targets[2] = w3;
       targets[3] = w4;
     }
+    if(c=='r') {          // Check resets
+      Serial.println(current_time);
+      Serial.println(reset_counts);
+    }    
   }
 }
 
