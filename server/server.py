@@ -43,6 +43,7 @@ class Fae:
                 ser.setDTR(False)
                 sleep(0.5)
                 #ser.open()
+                print(" * Fae controller found as device"+dev)
             except serial.serialutil.SerialException as e:
                 #print(str(e))
                 print("Could not connect to "+str(dev)+", try again in 1 second")
