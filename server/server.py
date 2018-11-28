@@ -15,10 +15,10 @@ def mtimereset():
     timer = dt.now()
 
 
-def mtime():
+def mtime(msg = ""):
     global timer
     n = dt.now()
-    print(str((n-timer).total_seconds()*1000)+" ms")
+    print(msg +":"+ " "*(15-len(msg))+str((n-timer).total_seconds()*1000)+" ms")
     timer = n
 
 
@@ -39,7 +39,7 @@ class Fae:
         while ser is None:
             dev = devices[ind % len(devices)]
             try:
-                ser = serial.Serial(dev, baudrate=115200)
+                ser = serial.Serial(dev, baudrate=9600)
                 ser.setDTR(False)
                 sleep(0.5)
                 #ser.open()
@@ -189,7 +189,9 @@ def go_target(tid):
 @app.route('/direction/<direction>', methods=['POST'])
 def move_direction(direction):
     global fae
+    mtimereset()
     fae.stop()
+    mtime("stop")
     speed = float(request.values.get('speed'))
     step_size = float(request.values.get('stepsize'))
 
@@ -213,8 +215,11 @@ def move_direction(direction):
         fae.delta(-step_size, -step_size, -step_size, -step_size)
     if direction == "down":
         fae.delta(step_size, step_size, step_size, step_size)
+    mtime("delta")
     fae.speed_given_speed(speed)
+    mtime("speed")
     fae.go()
+    mtime("go")
     return ""
 
 
