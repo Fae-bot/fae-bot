@@ -39,10 +39,11 @@ class Fae:
         while ser is None:
             dev = devices[ind % len(devices)]
             try:
-                ser = serial.Serial(dev, baudrate=115200)
+                ser = serial.Serial(dev, baudrate=9600)
                 ser.setDTR(False)
                 sleep(0.5)
                 #ser.open()
+                print(" * Fae controller found as device"+dev)
             except serial.serialutil.SerialException as e:
                 #print(str(e))
                 print("Could not connect to "+str(dev)+", try again in 1 second")
@@ -215,6 +216,7 @@ def move_direction(direction):
         fae.delta(step_size, step_size, step_size, step_size)
     fae.speed_given_speed(speed)
     fae.go()
+    print(direction)
     return ""
 
 
