@@ -2,9 +2,24 @@ from time import sleep
 import serial
 from math import sqrt
 from socket import gethostname
+from datetime import datetime as dt
 
 from flask import Flask, render_template_string, render_template, request, send_file, make_response
 app = Flask(__name__,  static_url_path='/static')
+
+timer = dt.now()
+
+
+def mtimereset():
+    global timer
+    timer = dt.now()
+
+
+def mtime():
+    global timer
+    n = dt.now()
+    print(str((n-timer).total_seconds()*1000)+" ms")
+    timer = n
 
 
 class Fae:
@@ -103,10 +118,6 @@ class Fae:
             self.motors_speed(0, 0, 0, 0)
 
 
-if gethostname() == "control":
-    fae = Fae()
-else:
-    fae = None
 
 targets = [[0, 0, 0, 0]]*10
 
@@ -228,8 +239,11 @@ def camera():
 
 if gethostname() == "control":
     port = 80
+    fae = Fae()
 else:
     port = 8000
+    fae = Fae()
+    #fae = None
 
 
 if __name__ == '__main__':
