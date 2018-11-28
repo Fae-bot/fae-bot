@@ -1,17 +1,18 @@
 int run = 0;
 
-int last_switch[] = {0,0,0,0};
+long last_switch[] = {0,0,0,0};
 int current_state[] = { LOW, LOW, LOW, LOW};
 int cycle_length[]={0, 0, 0, 0};
 int positions[] ={0,0,0,0};
 int directions[] = {1,1,1,1};
 int targets[4];
 
-int current_time=0;
+long current_time=0;
+int reset_counts=0;
 
 const int NUM_WINCHES = 4;
-const int INTERVAL=1;
-const int RESET_INTERVAL=10000000;
+const int INTERVAL=10;
+const long RESET_INTERVAL=1000000;
 
 void setup() {
   pinMode(13, OUTPUT);
@@ -23,7 +24,7 @@ void setup() {
   pinMode(7, OUTPUT);
   pinMode(6, OUTPUT);
   digitalWrite(12, HIGH);
-  Serial.begin(115200);
+  Serial.begin(9600);
 }
 
 void all_dirs(int dir){
@@ -42,6 +43,7 @@ void loop() {
             last_switch[i] -= current_time;
       }
       current_time = 0;
+      reset_counts++;
     }
     
     for(int i=0;i<NUM_WINCHES;i++){
@@ -53,7 +55,7 @@ void loop() {
         positions[i] += directions[i];
       }
     }
-    
+
     current_time+=INTERVAL;
 
     for(int i=0;i<NUM_WINCHES;i++){
@@ -110,6 +112,10 @@ void loop() {
       for(int i=0;i<NUM_WINCHES;i++){
         Serial.println(targets[i]);
       }
+    }
+    if(c=='r') {          // Check resets
+      Serial.println(current_time);
+      Serial.println(reset_counts);
     }
     if(c=='n') {          // New target <winch1> <winch2> <winch3> <winch4>
       int w1 = Serial.parseInt();
