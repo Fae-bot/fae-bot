@@ -249,8 +249,8 @@ if gethostname() == "control":
     fae = Fae()
 else:
     port = 8000
-    fae = Fae()
-    #fae = None
+    #fae = Fae()
+    fae = None
 
 
 if __name__ == '__main__':

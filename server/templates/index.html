@@ -9,6 +9,8 @@
 
     <script>
 
+var claw_url = "http://192.168.44.2:5001"
+
 var forcerefresh = 0;
 function refresh_image() {
   document.getElementById("camera").src="http://192.168.44.2:5001/camera?refresh="+forcerefresh;
@@ -20,6 +22,13 @@ function post(url) {
 	xhr.open("POST", url, true);
 	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 	xhr.send("stepsize="+stepSizeValue+"&speed="+speedValue);
+}
+
+function moveClaw(pos){
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", claw_url + "/claw/"+pos, true);
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhr.send();
 }
 
 function set_target(i) {
@@ -70,7 +79,13 @@ function updateDebugPos(){
 	xhr.send("");
 }
 
-window.onload = function(){ updateValue();};
+var servoPos=90;
+function updateServo() {
+	servoPos = document.getElementById("clawPos").value;
+	document.getElementById("clawDisplay").innerHTML="Claw pos = "+servoPos;
+}
+
+window.onload = function(){ updateValue(); updateServo};
 </script>
 
 <style>
@@ -148,7 +163,16 @@ div.button-grid { width:90%; font-size: 32px; background-color: lightgray; }
 				   	 }
 				   else{
 				     clearInterval(value);
-				     }"
->Debug</label> | Interval:<input type="text" id="debugInterval" value="1000"></div>
+				     }">
+	Debug</label> | Interval:<input type="text" id="debugInterval" value="1000"></div>
 <!-- <img src="/camera" onClick="refresh_image()" id="camera" > -->
+<span class='motor-console'>
+	<div class="display-big" id="clawDisplay">Claw pos = 90</div>
+	<div><input id="clawPos" type="range" onmousemove="updateServo()" ontouchmove="updateServo()" max="180"/></div>
+	<div><span class="button">TEST</span></div>
+	<span class="button">SET OPEN POS</span>
+	<span class="button">SET CLOSED POS</span>
+
+</span>
+
 </body>
