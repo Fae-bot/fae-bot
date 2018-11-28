@@ -14,7 +14,7 @@ int reset_counts=0;
 
 
 const int NUM_WINCHES = 4;
-const int INTERVAL=1;
+const int INTERVAL=5;
 const long RESET_INTERVAL=10000000;
 
 void setup() {
