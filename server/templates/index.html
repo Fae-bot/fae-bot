@@ -11,7 +11,7 @@
 
 var forcerefresh = 0;
 function refresh_image() {
-  document.getElementById("camera").src="/camera?refresh="+forcerefresh;
+  document.getElementById("camera").src="http://192.168.44.2:5001/camera?refresh="+forcerefresh;
   forcerefresh=forcerefresh+1;
 }
 

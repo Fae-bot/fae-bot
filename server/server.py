@@ -235,6 +235,7 @@ def camera():
         except:
             return""
 
+
 """
 
 if gethostname() == "control":
