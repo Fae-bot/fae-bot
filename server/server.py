@@ -5,7 +5,10 @@ from socket import gethostname
 from datetime import datetime as dt
 
 from flask import Flask, render_template_string, render_template, request, send_file, make_response
-app = Flask(__name__,  static_url_path='/static')
+
+
+app = Flask(__name__, static_url_path='/static')
+
 
 timer = dt.now()
 
@@ -121,7 +124,6 @@ class Fae:
 
 
 targets = [[0, 0, 0, 0]]*10
-
 
 @app.route('/')
 def index():
@@ -249,8 +251,8 @@ if gethostname() == "control":
     fae = Fae()
 else:
     port = 8000
-    fae = Fae()
-    #fae = None
+    #fae = Fae()
+    fae = None
 
 
 if __name__ == '__main__':
