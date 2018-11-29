@@ -1,11 +1,14 @@
 from time import sleep
+import sys
 import serial
 from math import sqrt
 from socket import gethostname
 from datetime import datetime as dt
-
+import json
 from flask import Flask, render_template_string, render_template, request, send_file, make_response
-
+import atexit
+import signal
+from threading import Lock
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -18,10 +21,10 @@ def mtimereset():
     timer = dt.now()
 
 
-def mtime(msg = ""):
+def mtime(msg=""):
     global timer
     n = dt.now()
-    print(msg +":"+ " "*(15-len(msg))+str((n-timer).total_seconds()*1000)+" ms")
+    print(msg + ":" + " "*(15-len(msg))+str((n-timer).total_seconds()*1000)+" ms")
     timer = n
 
 
@@ -30,6 +33,7 @@ class Fae:
         self.numMotors = 4
         self.targetPos = [0, 0, 0, 0]
         self.lastPos = [-1, -1, -1, -1]
+        self.slock = Lock()
 
         # Connect to the USB serial
         devices = list()
@@ -55,16 +59,57 @@ class Fae:
                 sleep(1)
         self.serial = ser
 
+        self.targets = dict()
+        # Reload targets if available
+        try:
+            fb = open("targets", "r")
+            for line in fb.read().split("\n"):
+                arr = line.split(" ")
+                if len(arr) < 5:
+                    continue
+                self.targets[" ".join(arr[:-4])] = [int(arr[-4]), int(arr[-3]), int(arr[-2]), int(arr[-1])]
+            fb.close()
+        except Exception as e:
+            print(e)
+            pass
+        print(" * Targets: " + str(self.targets))
+        # Reload last position
+        try:
+            f = open("last_pos")
+            pos = [int(x) for x in f.read().split(" ")]
+            print(pos, len(pos))
+            if len(pos)==4:
+                self.lastPos = pos
+                self.set_pos(self.lastPos)
+        except Exception as e:
+            print(e)
+            pass
+        print(" * Last position: " + str(self.lastPos))
+
+        
     def close(self):
         self.serial.close()
+        
+    def write_position(self):
+        try:
+            f = open("last_pos", "w")
+            content = " ".join([str(x) for x in self.lastPos])+"\n"
+            f.write(content)
+            print("Wrote:"+repr(content))
+        except Exception as e:
+            print(" * Could not write position: "+str(e))
 
     def stop(self):
+        self.slock.acquire()
         self.serial.write("s\n")
         self.serial.flush()
+        self.slock.release()
 
     def go(self):
+        self.slock.acquire()
         self.serial.write("g\n")
         self.serial.flush()
+        self.slock.release()
 
     def motors_speed(self, m1, m2, m3, m4):
         cmd = "m 1 "+str(int(m1))+"\n"
@@ -72,7 +117,9 @@ class Fae:
         cmd += "m 3 "+str(int(m3))+"\n"
         cmd += "m 4 "+str(int(m4))+"\n"
         print(cmd)
+        self.slock.acquire()
         self.serial.write(cmd)
+        self.slock.release()
         self.serial.flush()
 
     def all_speeds(self, s):
@@ -81,21 +128,38 @@ class Fae:
     def target(self, t1, t2, t3, t4):
         self.targetPos = [int(t1), int(t2), int(t3), int(t4)]
         cmd = "n "+str(int(t1))+" "+str(int(t2))+" "+str(int(t3))+" "+str(int(t4))+"\n"
+        self.slock.acquire()
         self.serial.write(cmd)
         print(cmd[:-1])
         self.serial.flush()
+        self.slock.release()
 
     def sync(self):
-        self.serial.write("p\n")
-        self.serial.flush()
-        self.lastPos[0] = int(self.serial.readline())
-        self.lastPos[1] = int(self.serial.readline())
-        self.lastPos[2] = int(self.serial.readline())
-        self.lastPos[3] = int(self.serial.readline())
+		try:
+			self.slock.acquire()
+			self.serial.write("p\r\n")
+			self.serial.flush()
+			line = self.serial.readline()
+			self.lastPos = [int(x) for x in line.rstrip("\n\r ").split(" ")]
+			self.write_position()
+			print(repr(line))
+			print("SYNC "+str(self.lastPos))
+		finally:
+			self.slock.release()
 
     def delta(self, d1, d2, d3, d4):
         self.sync()
         self.target(self.lastPos[0] + d1, self.lastPos[1] + d2, self.lastPos[2] + d3, self.lastPos[3] + d4)
+        
+    def set_pos(self, pos):
+        self.lastPos=pos
+        cmd="z "+" ".join([str(x) for x in pos])+"\n"
+        self.slock.acquire()
+        self.serial.write(cmd)
+        self.serial.flush()
+        self.slock.release()
+        print(cmd)
+        #self.sync()
 
     def speed_given_time(self, ttt):  # ttt = time to target, in milliseconds
         self.sync()
@@ -121,9 +185,11 @@ class Fae:
         else:
             self.motors_speed(0, 0, 0, 0)
 
+    def write_targets(self):
+        fb = open("targets", "w")
+        for k, v in self.targets.items():
+            fb.write(k + " " + " ".join([str(c) for c in v]) + "\n")
 
-
-targets = [[0, 0, 0, 0]]*10
 
 @app.route('/')
 def index():
@@ -167,25 +233,25 @@ def stop_all():
 
 @app.route('/set_target/<tid>', methods=['POST'])
 def set_target(tid):
-    global targets
+    global fae
     fae.sync()
-    print(targets)
-    targets[int(tid)] = list(fae.lastPos)
-    print(targets)
+    fae.targets[str(tid)] = list(fae.lastPos)
+    print(fae.targets)
+    fae.write_targets()
     return " ".join([str(x) for x in fae.lastPos])
 
 
 @app.route('/go_target/<tid>', methods=['POST'])
 def go_target(tid):
-    global targets, fae
+    global fae
     fae.stop()
     speed = float(request.values.get('speed'))
     print(tid)
-    print(targets)
-    fae.target(*targets[int(tid)])
+    print(fae.targets)
+    fae.target(*fae.targets[str(tid)])
     fae.speed_given_speed(speed)
     fae.go()
-    print(targets)
+    print(fae.targets)
     return ""
 
 
@@ -233,6 +299,11 @@ def get_position():
     return " ".join([str(x) for x in fae.lastPos])
 
 
+@app.route('/targets', methods=['GET'])
+def get_targets():
+    global fae
+    return json.dumps(fae.targets)
+
 """@app.route('/camera',methods=['GET'])
 def camera():
     subprocess.call(["fswebcam", "-r", "640x480", "--no-banner", "--no-overlay", "--no-underlay", "--save", "/tmp/image.jpg"])
@@ -247,15 +318,21 @@ def camera():
 """
 
 if gethostname() == "control":
-    port = 80
+    port = 8000
     fae = Fae()
 else:
     port = 8000
     #fae = Fae()
     fae = None
 
+def shutdown(signum, frame):
+    sleep(4)
+    fae.close()
+    sys.exit()
+
+#signal.signal(signal.SIGINT, shutdown)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
 
-#fae.close()
+fae.close()

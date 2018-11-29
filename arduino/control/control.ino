@@ -78,7 +78,7 @@ void loop() {
   delayMicroseconds(INTERVAL);
 
 
-  if(Serial.available() > 0){
+  while(Serial.available() > 0){
     char c = Serial.read();
     if(c=='s') { run=0; }  // Stop
     if(c=='g') { run=1; }  // Go
@@ -96,15 +96,17 @@ void loop() {
         directions[mnum]=1;        
       }
     }
-    if(c=='z') {          // Zero
+    if(c=='z') {          // Replace Zero with new position
       for(int i=0;i<NUM_WINCHES;i++){
-        positions[i]=0;
+        positions[i]=Serial.parseInt();
       }
     }
     if(c=='p') {          // Position
       for(int i=0;i<NUM_WINCHES;i++){
-        Serial.println(positions[i]);
+        Serial.print(positions[i]);
+        Serial.print(' ');
       }
+      Serial.print('\n');
     }
     if(c=='e') {          // Check speed
       for(int i=0;i<NUM_WINCHES;i++){
@@ -127,7 +129,7 @@ void loop() {
       targets[3] = w4;
     }
     if(c=='r') {          // Check resets
-      Serial.println(current_time);
+      Serial.print(current_time);
       Serial.println(reset_counts);
     }    
   }
