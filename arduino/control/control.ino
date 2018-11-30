@@ -5,7 +5,7 @@ int current_state[] = { LOW, LOW, LOW, LOW};
 int cycle_length[]={0, 0, 0, 0};
 long positions[] ={0,0,0,0};
 int directions[] = {1,1,1,1};
-int targets[4];
+long targets[4];
 
 long current_time=0;
 int reset_counts=0;
@@ -119,10 +119,10 @@ void loop() {
       }
     }
     if(c=='n') {          // New target <winch1> <winch2> <winch3> <winch4>
-      int w1 = Serial.parseInt();
-      int w2 = Serial.parseInt();
-      int w3 = Serial.parseInt();
-      int w4 = Serial.parseInt();
+      long w1 = Serial.parseInt();
+      long w2 = Serial.parseInt();
+      long w3 = Serial.parseInt();
+      long w4 = Serial.parseInt();
       targets[0] = w1;
       targets[1] = w2;
       targets[2] = w3;
