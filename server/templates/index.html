@@ -142,30 +142,30 @@ div.button-grid { width:90%; font-size: 32px; background-color: #aaffaa; }
 
 <table width=100%>
 	<tr>
-		<td><div onClick='post("direction/nw")' class='button-grid'>&#8662;</div></td>
-		<td><div onClick='post("direction/n")' class='button-grid'>&#x21D1;</div></td>
-		<td><div onClick='post("direction/ne")' class='button-grid'>&#x21D7;</div></td>
-		<td><div onClick='post("direction/up")' class='button-grid'>UP</div></td>
+		<td><div onClick='post("direction/nw")' class='button-dark'>&#8662;</div></td>
+		<td><div onClick='post("direction/n")' class='button-light'>&#x21D1;</div></td>
+		<td><div onClick='post("direction/ne")' class='button-dark'>&#x21D7;</div></td>
+		<td><div onClick='post("direction/up")' class='button-light'>UP</div></td>
 	</tr>
 	<tr>
-		<td><div onClick='post("direction/w")' class='button-grid'>&#x21D0;</div></td>
+		<td><div onClick='post("direction/w")' class='button-light'>&#x21D0;</div></td>
 		<td><div onClick='post("stop")' class='button-stop'>X</div></td>
-		<td><div onClick='post("direction/e")' class='button-grid'>&#x21D2;</div></td>
+		<td><div onClick='post("direction/e")' class='button-light'>&#x21D2;</div></td>
 		<td><div class="debug" id="debugPos">-</div></td>
 	</tr>
 	<tr>
-		<td><div onClick='post("direction/sw")' class='button-grid'>&#x21D9;</div></td>
-		<td><div onClick='post("direction/s")' class='button-grid'>&#x21D3;</div></td>
-		<td><div onClick='post("direction/se")' class='button-grid'>&#x21D8;</div></td>
-		<td><div onClick='post("direction/down")' class='button-grid'>DOWN</div></td>
+		<td><div onClick='post("direction/sw")' class='button-dark'>&#x21D9;</div></td>
+		<td><div onClick='post("direction/s")' class='button-light'>&#x21D3;</div></td>
+		<td><div onClick='post("direction/se")' class='button-dark'>&#x21D8;</div></td>
+		<td><div onClick='post("direction/down")' class='button-dark'>DOWN</div></td>
 	</tr>
 </table>
 <div>
 	<span class='motor-console'>
 		CLAW:
-		<span class='button' onClick='postsimple(claw_url+"/claw/go_open")'>OPEN</span>
+		<span class='button-dark' onClick='postsimple(claw_url+"/claw/go_open")'>OPEN</span>
 		&nbsp;
-		<span class='button' onClick='postsimple(claw_url+"/claw/go_closed")'>CLOSE</span>
+		<span class='button-light' onClick='postsimple(claw_url+"/claw/go_closed")'>CLOSE</span>
 	</span>
 </div>
 <br/>
