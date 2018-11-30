@@ -7,8 +7,12 @@ from datetime import datetime as dt
 import json
 from flask import Flask, render_template_string, render_template, request, send_file, make_response
 import atexit
+<<<<<<< HEAD
 import signal
 from threading import Lock
+=======
+
+>>>>>>> 9c95a443b375cb6c8183ec2b80e6704b8b620e69
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -86,8 +90,8 @@ class Fae:
             pass
         print(" * Last position: " + str(self.lastPos))
 
-        
     def close(self):
+        self.sync()
         self.serial.close()
         
     def write_position(self):
@@ -332,7 +336,13 @@ def shutdown(signum, frame):
 
 #signal.signal(signal.SIGINT, shutdown)
 
+def exit_handler():
+    global fae
+    fae.close()
+
+
+atexit.register(exit_handler)
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
 
-fae.close()

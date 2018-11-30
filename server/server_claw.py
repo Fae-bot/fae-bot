@@ -1,6 +1,7 @@
 from time import sleep
 import serial
 import subprocess
+from socket import gethostname
 
 from flask import Flask, render_template_string, render_template, request, make_response, send_file
 app = Flask(__name__)
@@ -20,7 +21,7 @@ class FaeClaw:
             while ser is None:
                 dev = devices[ind % len(devices)]
                 try:
-                    ser = serial.Serial(dev, baudrate=9600)
+                    ser = serial.Serial(dev, baudrate=57600)
                     ser.setDTR(False)
                     sleep(0.5)
                     #ser.open()
@@ -71,7 +72,10 @@ class FaeClaw:
 
 
 global claw
-claw = FaeClaw(True)
+if gethostname() == "claw":
+    claw = FaeClaw()
+else:
+    claw = FaeClaw(skip=True)
 
 
 @app.route('/')
