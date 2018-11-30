@@ -99,7 +99,25 @@ function updateServo() {
 	document.getElementById("clawDisplay").innerHTML="Claw pos = "+servoPos;
 }
 
-window.onload = function(){ updateValue(); updateServo};
+var targets;
+function updateTargets() {
+	var xhr = new XMLHttpRequest();
+
+	xhr.onreadystatechange = function() {
+		if (xhr.readyState === 4) {
+		  targets = JSON.parse(xhr.response)
+		  for(var i=0;i<10;i++){
+		    document.getElementById("targetPos"+i).innerHTML=targets[""+i];
+	      }
+		}
+	  }
+
+    xhr.open("GET", "/targets", true);
+    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhr.send("");
+}
+
+window.onload = function(){ updateValue(); updateServo; updateTargets(); updateDebugPos()};
 </script>
 
 <style>

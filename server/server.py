@@ -3,8 +3,9 @@ import serial
 from math import sqrt
 from socket import gethostname
 from datetime import datetime as dt
-
+import json
 from flask import Flask, render_template_string, render_template, request, send_file, make_response
+import atexit
 
 
 app = Flask(__name__, static_url_path='/static')
@@ -18,10 +19,10 @@ def mtimereset():
     timer = dt.now()
 
 
-def mtime(msg = ""):
+def mtime(msg=""):
     global timer
     n = dt.now()
-    print(msg +":"+ " "*(15-len(msg))+str((n-timer).total_seconds()*1000)+" ms")
+    print(msg + ":" + " "*(15-len(msg))+str((n-timer).total_seconds()*1000)+" ms")
     timer = n
 
 
@@ -55,8 +56,36 @@ class Fae:
                 sleep(1)
         self.serial = ser
 
+        self.targets = dict()
+        # Reload targets if available
+        try:
+            fb = open("targets", "r")
+            for line in fb.read().split("\n"):
+                arr = line.split(" ")
+                if len(arr) < 5:
+                    continue
+                self.targets[" ".join(arr[:-4])] = [int(arr[-4]), int(arr[-3]), int(arr[-2]), int(arr[-1])]
+            fb.close()
+        except Exception as e:
+            print(e)
+            pass
+        print(" * Targets: " + str(self.targets))
+        # Reload last position
+        try:
+            f = open("last_pos")
+            pos = [int(x) for x in f.read().split(" ")]
+            if len(pos)==4:
+                self.lastPos = pos
+        except Exception as e:
+            print(e)
+            pass
+        print(" * Last position: " + str(self.lastPos))
+
     def close(self):
+        self.sync()
         self.serial.close()
+        f = open("last_pos", "w")
+        f.write(" ".join([str(x) for x in self.lastPos]))
 
     def stop(self):
         self.serial.write("s\n")
@@ -121,9 +150,11 @@ class Fae:
         else:
             self.motors_speed(0, 0, 0, 0)
 
+    def write_targets(self):
+        fb = open("targets", "w")
+        for k, v in self.targets.items():
+            fb.write(k + " " + " ".join([str(c) for c in v]) + "\n")
 
-
-targets = [[0, 0, 0, 0]]*10
 
 @app.route('/')
 def index():
@@ -167,25 +198,25 @@ def stop_all():
 
 @app.route('/set_target/<tid>', methods=['POST'])
 def set_target(tid):
-    global targets
+    global fae
     fae.sync()
-    print(targets)
-    targets[int(tid)] = list(fae.lastPos)
-    print(targets)
+    fae.targets[str(tid)] = list(fae.lastPos)
+    print(fae.targets)
+    fae.write_targets()
     return " ".join([str(x) for x in fae.lastPos])
 
 
 @app.route('/go_target/<tid>', methods=['POST'])
 def go_target(tid):
-    global targets, fae
+    global fae
     fae.stop()
     speed = float(request.values.get('speed'))
     print(tid)
-    print(targets)
-    fae.target(*targets[int(tid)])
+    print(fae.targets)
+    fae.target(*fae.targets[str(tid)])
     fae.speed_given_speed(speed)
     fae.go()
-    print(targets)
+    print(fae.targets)
     return ""
 
 
@@ -233,6 +264,11 @@ def get_position():
     return " ".join([str(x) for x in fae.lastPos])
 
 
+@app.route('/targets', methods=['GET'])
+def get_targets():
+    global fae
+    return json.dumps(fae.targets)
+
 """@app.route('/camera',methods=['GET'])
 def camera():
     subprocess.call(["fswebcam", "-r", "640x480", "--no-banner", "--no-overlay", "--no-underlay", "--save", "/tmp/image.jpg"])
@@ -255,7 +291,13 @@ else:
     fae = None
 
 
+def exit_handler():
+    global fae
+    fae.close()
+
+
+atexit.register(exit_handler)
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
 
-#fae.close()
