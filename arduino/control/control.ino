@@ -18,23 +18,23 @@ const int INTERVAL=5;
 const long RESET_INTERVAL=10000000;
 
 void setup() {
-  pinMode(13, OUTPUT);
-  pinMode(12, OUTPUT);
-  pinMode(11, OUTPUT);
-  pinMode(10, OUTPUT);
   pinMode(9, OUTPUT);
   pinMode(8, OUTPUT);
   pinMode(7, OUTPUT);
   pinMode(6, OUTPUT);
-  digitalWrite(12, HIGH);
+  pinMode(5, OUTPUT);
+  pinMode(4, OUTPUT);
+  pinMode(3, OUTPUT);
+  pinMode(2, OUTPUT);
+  digitalWrite(8, HIGH);
   Serial.begin(9600);
 }
 
 void all_dirs(int dir){
-  digitalWrite(12, dir);
-  digitalWrite(10, dir);
   digitalWrite(8, dir);
   digitalWrite(6, dir);
+  digitalWrite(4, dir);
+  digitalWrite(2, dir);
 }
 
 
@@ -53,7 +53,7 @@ void loop() {
       if(cycle_length[i]==0) continue;
       if(last_switch[i]+cycle_length[i]<current_time){
         if(current_state[i]==LOW) current_state[i]=HIGH; else current_state[i]=LOW;
-        digitalWrite(13-i*2, current_state[i]);
+        digitalWrite(9-i*2, current_state[i]);
         last_switch[i]=current_time;
         positions[i] += directions[i];
       }
@@ -64,11 +64,11 @@ void loop() {
     for(int i=0;i<NUM_WINCHES;i++){
       if(targets[i]>positions[i]){
         directions[i]=1;
-        digitalWrite(12-i*2, HIGH);         // Not necessary every cycle
+        digitalWrite(8-i*2, HIGH);         // Not necessary every cycle
       }
       if(targets[i]<positions[i]){
         directions[i]=-1;
-        digitalWrite(12-i*2, LOW);          // Not necessary every cycle
+        digitalWrite(128-i*2, LOW);          // Not necessary every cycle
       }
       if(targets[i]==positions[i]){
         cycle_length[i]=0;
@@ -87,18 +87,18 @@ void loop() {
       int mspeed = Serial.parseInt();
       if(mspeed<0){
         cycle_length[mnum] = -mspeed;
-        digitalWrite(12-mnum*2, LOW);
+        digitalWrite(8-mnum*2, LOW);
         directions[mnum]=-1;
       }
       else{
         cycle_length[mnum] = mspeed;
-        digitalWrite(12-mnum*2, HIGH);
+        digitalWrite(8-mnum*2, HIGH);
         directions[mnum]=1;        
       }
     }
-    if(c=='z') {          // Replace Zero with new position
+    if(c=='z') {          // Resets positionx
       for(int i=0;i<NUM_WINCHES;i++){
-        positions[i]=Serial.parseInt();
+        positions[i]=0;
       }
     }
     if(c=='p') {          // Position
