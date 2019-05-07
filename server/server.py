@@ -89,7 +89,7 @@ class Fae:
     def close(self):
         self.sync()
         self.serial.close()
-        
+
     def write_position(self):
         try:
             f = open("last_pos", "w")
@@ -135,22 +135,22 @@ class Fae:
         self.slock.release()
 
     def sync(self):
-		try:
-			self.slock.acquire()
-			self.serial.write("p\r\n")
-			self.serial.flush()
-			line = self.serial.readline()
-			self.lastPos = [int(x) for x in line.rstrip("\n\r ").split(" ")]
-			self.write_position()
-			print(repr(line))
-			print("SYNC "+str(self.lastPos))
-		finally:
-			self.slock.release()
+        try:
+            self.slock.acquire()
+            self.serial.write("p\r\n")
+            self.serial.flush()
+            line = self.serial.readline()
+            self.lastPos = [int(x) for x in line.rstrip("\n\r ").split(" ")]
+            self.write_position()
+            print(repr(line))
+            print("SYNC "+str(self.lastPos))
+        finally:
+            self.slock.release()
 
     def delta(self, d1, d2, d3, d4):
         self.sync()
         self.target(self.lastPos[0] + d1, self.lastPos[1] + d2, self.lastPos[2] + d3, self.lastPos[3] + d4)
-        
+
     def set_pos(self, pos):
         self.lastPos=pos
         cmd="z "+" ".join([str(x) for x in pos])+"\n"
@@ -317,7 +317,7 @@ def camera():
 
 """
 
-if gethostname() == "control":
+if gethostname() == "control" or "control" in sys.argv:
     port = 80
     fae = Fae()
 else:
@@ -327,4 +327,3 @@ else:
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
-
