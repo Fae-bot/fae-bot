@@ -1,3 +1,7 @@
+# Dependencies:
+# * Flask
+# * pyserial (NOT Serial)
+
 from time import sleep
 import sys
 import serial
