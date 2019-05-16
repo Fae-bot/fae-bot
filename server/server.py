@@ -76,6 +76,13 @@ class FaeVision:
                         self.orientations.append((current_time, sum_v/sum_count))
 
 
+class MySerial(serial.Serial):
+    def write(self, s):
+        if type(s) is bytes:
+            serial.Serial.write(self, s)
+        else:
+            serial.Serial.write(self, bytes(s, 'utf-8'))
+
 
 class Fae:
     def __init__(self):
@@ -95,7 +102,8 @@ class Fae:
         while ser is None:
             dev = devices[ind % len(devices)]
             try:
-                ser = serial.Serial(dev, baudrate=9600)
+                #ser = serial.Serial(dev, baudrate=9600)
+                ser = MySerial(dev, baudrate=9600)
                 ser.setDTR(False)
                 sleep(0.5)
                 #ser.open()
@@ -132,6 +140,10 @@ class Fae:
                 self.set_pos(self.lastPos)
         except Exception as e:
             print(e)
+            try:
+                self.slock.release()
+            except RuntimeError:
+                pass
             pass
         print(" * Last position: " + str(self.lastPos))
 
@@ -149,10 +161,11 @@ class Fae:
             print(" * Could not write position: "+str(e))
 
     def stop(self):
-        self.slock.acquire()
+        #self.slock.acquire()
+        self.serial.flush()
         self.serial.write("s\n")
         self.serial.flush()
-        self.slock.release()
+        #self.slock.release()
 
     def go(self):
         self.slock.acquire()
@@ -192,7 +205,7 @@ class Fae:
             self.slock.acquire()
             self.serial.write("p\r\n")
             self.serial.flush()
-            line = self.serial.readline()
+            line = self.serial.readline().decode("utf-8")
             self.lastPos = [int(x) for x in line.rstrip("\n\r ").split(" ")]
             self.write_position()
             print(repr(line))
@@ -205,7 +218,7 @@ class Fae:
         self.target(self.lastPos[0] + d1, self.lastPos[1] + d2, self.lastPos[2] + d3, self.lastPos[3] + d4)
 
     def set_pos(self, pos):
-        self.lastPos=pos
+        self.lastPos = pos
         cmd="z "+" ".join([str(x) for x in pos])+"\n"
         self.slock.acquire()
         self.serial.write(cmd)
