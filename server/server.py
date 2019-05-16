@@ -1,6 +1,8 @@
 # Dependencies:
 # * Flask
 # * pyserial (NOT Serial)
+# * ~~pyquaternion~~ -> my modified version fae_quaternion.py
+# * numpy
 
 from time import sleep
 import sys
@@ -10,9 +12,12 @@ from socket import gethostname
 from datetime import datetime as dt
 import json
 from flask import Flask, render_template_string, render_template, request, send_file, make_response
-import atexit
-import signal
 from threading import Lock
+import subprocess as sb
+from threading import Thread
+import numpy as np
+from fae_quaternion import Quaternion
+
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -30,6 +35,46 @@ def mtime(msg=""):
     n = dt.now()
     print(msg + ":" + " "*(15-len(msg))+str((n-timer).total_seconds()*1000)+" ms")
     timer = n
+
+
+class FaeVision:
+    ARTK_PATH = "../../artoolkit5/bin/simpleLite"
+    ARTK_ARGS = ['--vconf', '-dev=/dev/video0', '--thresh', '2']
+    SUMMATION_PERIOD = 0.2
+
+    def __init__(self):
+        self.process = None
+        self.orientations = list()
+        self.thread = Thread(target = self.artk_process)
+        self.thread.start()
+
+    def artk_process(self):
+        self.process = sb.Popen([FaeVision.ARTK_PATH] + FaeVision.ARTK_ARGS,
+                                stdout=sb.PIPE,
+                                stderr=sb.PIPE,
+                                encoding="utf-8",
+                                env={'DISPLAY': ':0'})
+        while self.process.poll() is None:
+            line = self.process.stdout.readline()
+            arr = line.rstrip().split(" ")
+            sum_v = Quaternion(scalar=0, vector=(0, 0, 0))
+            sum_count = 0
+            sum_last_time = -1
+            if len(arr) == 17:
+                current_time = float(arr[0])
+                if sum_last_time < 0:
+                    sum_last_time = current_time
+                mat = np.array([float(a) for a in arr[1:]])
+                mat = mat.reshape(4, 4)
+                mat = mat[:3, :3]
+                quat = Quaternion(matrix=mat[:3, :3], force_imperfect=True)
+                if current_time-sum_last_time < FaeVision.SUMMATION_PERIOD:
+                    sum_v += quat
+                    sum_count += 1
+                else:
+                    if sum_count > 0:
+                        self.orientations.append((current_time, sum_v/sum_count))
+
 
 
 class Fae:
@@ -114,6 +159,10 @@ class Fae:
         self.serial.write("g\n")
         self.serial.flush()
         self.slock.release()
+
+    def randomize(self):
+        # Make 10 random moves of 1 sec
+        pass
 
     def motors_speed(self, m1, m2, m3, m4):
         cmd = "m 1 "+str(int(m1))+"\n"
