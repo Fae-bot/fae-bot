@@ -4,6 +4,9 @@
 
 	<link rel="stylesheet" href="/static/range.css">
 	<title>Wirebot control</title>
+	<link rel="icon"
+      type="image/png"
+      href="/static/favicon.ico">
 </head>
 <body>
 
@@ -117,12 +120,26 @@ function updateTargets() {
 	xhr.send("");
 }
 
-window.onload = function(){ updateValue(); updateServo; updateTargets(); updateDebugPos()};
+function ge(id){
+	return document.getElementById(id);
+	}
+
+function toggleVisible(id){
+	if(ge(id).style.display == 'none'){
+		ge(id).style.display = 'block';
+	}
+	else{
+		ge(id).style.display = 'none';
+	}
+}
+
+//window.onload = function(){ updateValue(); updateServo; updateTargets(); updateDebugPos()};
+window.onload = function(){ toggleVisible('targets-table');}
 </script>
 
 <style>
 div {font-size: 32px;text-align:center;}
-div.motor-console {text-align:center; width:45%; position: relative; float:left; border-style:solid; border-width:1px;margin:2px;}
+div.motor-console {text-align:center; width:49%; position: relative; float:left; border-style:solid; border-width:1px;margin:2px;}
 span.motor-console {text-align:center; width:99%; position: relative; float:left; border-style:solid; border-width:1px; margin:2px;}
 .button {font-size: 32px; background-color: #aaffaa; text-align:center;}
 .button-dark {font-size: 32px; background-color: #55ff55; text-align:center;}
@@ -131,6 +148,8 @@ span.motor-console {text-align:center; width:99%; position: relative; float:left
 div.button-grid { width:90%; font-size: 32px; background-color: #aaffaa; }
 .button-stop { font-size: 32px; background-color: #ff8888; }
 .debug {font-size:12px;}
+.directions-control {display: none;} // deactivated for now
+.claw-control {display: none;} // deactivated for now
 
 </style>
 
@@ -139,7 +158,7 @@ div.button-grid { width:90%; font-size: 32px; background-color: #aaffaa; }
 <div class="display-big" id="speedDisplay">Speed = 300</div>
 <div><input id="speed" type="range" onmousemove="updateValue()" ontouchmove="updateValue()" min="1" max="200" value="140"/></div>
 
-
+<div class='directions-control'>
 <table width=100%>
 	<tr>
 		<td><div onClick='post("direction/nw")' class='button-dark'>&#8662;</div></td>
@@ -160,7 +179,8 @@ div.button-grid { width:90%; font-size: 32px; background-color: #aaffaa; }
 		<td><div onClick='post("direction/down")' class='button-dark'>DOWN</div></td>
 	</tr>
 </table>
-<div>
+</div>
+<div class="claw-control">
 	<span class='motor-console'>
 		CLAW:
 		<span class='button-dark' onClick='postsimple(claw_url+"/claw/go_open")'>OPEN</span>
@@ -170,9 +190,10 @@ div.button-grid { width:90%; font-size: 32px; background-color: #aaffaa; }
 </div>
 <br/>
 
-<div class=''>
-	TARGETS
-	<table style="max-width:500px; width:100%">
+<div class="targets-control">
+	<div onClick="toggleVisible('targets-table')">TARGETS</div>
+	<div id="targets-table" >
+	<table style="max-width:500px; width:100%; ">
 		{% for i in range(0,10) %}
 			<tr>
 				<td class='button-gray' onClick='set_target({{i}})'>SET</td>
@@ -182,6 +203,7 @@ div.button-grid { width:90%; font-size: 32px; background-color: #aaffaa; }
 			</tr>
 		{% endfor %}
 	</table>
+	</div>
 </div>
 <div><label><input type="checkbox" id="debugCheckBox"
 				   onclick="
@@ -203,7 +225,7 @@ div.button-grid { width:90%; font-size: 32px; background-color: #aaffaa; }
 		</span> -->
 
 
-	<div onClick='post("stop")' class='button-stop' width="100%">STOP</div>
+	<div onClick='post("stop")' class='button-stop' width="100%" >STOP</div>
 
 <div>
 	{% for i in (3,4,1,2) %}
@@ -214,5 +236,7 @@ div.button-grid { width:90%; font-size: 32px; background-color: #aaffaa; }
 	</div>
 	{% endfor %}
 </div>
-
+<div width="100%"><span onClick='post("randomize")' class='button-stop' width="100%">RANDOM MOVE</span></div>
+<div width="100%"><span onClick='post("record")' class='button-stop' width="100%">RECORD</span></div>
+<div width="100%"><span onClick='post("stop_record")' class='button-stop' width="100%">STOP RECORD</span></div>
 </body>

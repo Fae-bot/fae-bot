@@ -4,7 +4,7 @@
 # * ~~pyquaternion~~ -> my modified version fae_quaternion.py
 # * numpy
 
-from time import sleep
+from time import sleep, localtime
 import sys
 import serial
 from math import sqrt
@@ -17,7 +17,7 @@ import subprocess as sb
 from threading import Thread
 import numpy as np
 from fae_quaternion import Quaternion
-
+from random import randint, uniform
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -39,7 +39,7 @@ def mtime(msg=""):
 
 class FaeVision:
     ARTK_PATH = "../../artoolkit5/bin/simpleLite"
-    ARTK_ARGS = ['--vconf', '-dev=/dev/video0', '--thresh', '2']
+    ARTK_ARGS = ['--vconf', '-dev=/dev/video0', '--thresh', '3']
     SUMMATION_PERIOD = 0.2
 
     def __init__(self):
@@ -47,15 +47,18 @@ class FaeVision:
         self.orientations = list()
         self.thread = Thread(target = self.artk_process)
         self.thread.start()
+        self.slock = Lock()
+        self.current_time = -1
+        self.recording = False
 
     def artk_process(self):
         self.process = sb.Popen([FaeVision.ARTK_PATH] + FaeVision.ARTK_ARGS,
                                 stdout=sb.PIPE,
-                                stderr=sb.PIPE,
                                 encoding="utf-8",
                                 env={'DISPLAY': ':0'})
         while self.process.poll() is None:
             line = self.process.stdout.readline()
+            print(line)
             arr = line.rstrip().split(" ")
             sum_v = Quaternion(scalar=0, vector=(0, 0, 0))
             sum_count = 0
@@ -68,12 +71,18 @@ class FaeVision:
                 mat = mat.reshape(4, 4)
                 mat = mat[:3, :3]
                 quat = Quaternion(matrix=mat[:3, :3], force_imperfect=True)
-                if current_time-sum_last_time < FaeVision.SUMMATION_PERIOD:
+                """if current_time-sum_last_time < FaeVision.SUMMATION_PERIOD:
                     sum_v += quat
                     sum_count += 1
                 else:
                     if sum_count > 0:
+                        self.current_time = current_time
                         self.orientations.append((current_time, sum_v/sum_count))
+                """
+                self.slock.acquire()
+                self.current_time = current_time
+                self.orientations.append((current_time, quat))
+                self.slock.release()
 
 
 class MySerial(serial.Serial):
@@ -89,7 +98,9 @@ class Fae:
         self.numMotors = 4
         self.targetPos = [0, 0, 0, 0]
         self.lastPos = [-1, -1, -1, -1]
+        self.currentSpeed = [0, 0, 0, 0]
         self.slock = Lock()
+        self.rlock = Lock()
 
         # Connect to the USB serial
         devices = list()
@@ -173,19 +184,20 @@ class Fae:
         self.serial.flush()
         self.slock.release()
 
-    def randomize(self):
-        # Make 10 random moves of 1 sec
-        pass
-
     def motors_speed(self, m1, m2, m3, m4):
+        self.rlock.acquire()
+        self.currentSpeed = [m1,m2,m3,m4]
+        self.rlock.release()
         cmd = "m 1 "+str(int(m1))+"\n"
         cmd += "m 2 "+str(int(m2))+"\n"
         cmd += "m 3 "+str(int(m3))+"\n"
         cmd += "m 4 "+str(int(m4))+"\n"
         print(cmd)
         self.slock.acquire()
+        print("lock acquired")
         self.serial.write(cmd)
         self.slock.release()
+        print("lock released")
         self.serial.flush()
 
     def all_speeds(self, s):
@@ -270,8 +282,8 @@ def roll_motor(mid):
     fae.stop()
     args = [0]*fae.numMotors
     args[int(mid)-1] = - step_size
-    fae.delta(*args)
-    fae.speed_given_speed(speed)
+    fae.motors_speed(*args)
+    #fae.speed_given_speed(speed)
     fae.go()
     return ""
 
@@ -284,8 +296,8 @@ def unroll_motor(mid):
     fae.stop()
     args = [0] * fae.numMotors
     args[int(mid) - 1] = step_size
-    fae.delta(*args)
-    fae.speed_given_speed(speed)
+    fae.motors_speed(*args)
+    #fae.speed_given_speed(speed)
     fae.go()
     return ""
 
@@ -358,11 +370,69 @@ def move_direction(direction):
     return ""
 
 
+@app.route('/randomize', methods=['POST'])
+def randomize():
+    # Make 6 random moves of 1 sec
+    for k in range(6):
+        motors_speed = list()
+        for im in range(4):
+            v = uniform(40, 100)
+            v *= randint(0, 1)*2 - 1
+            motors_speed.append(v)
+        fae.motors_speed(*motors_speed)
+        fae.go()
+        sleep(1)
+        fae.stop()
+    return ""
+
+
+@app.route('/record', methods=['POST'])
+def record():
+    global fae_vision
+    print("Starting fae vision")
+    fae_vision = FaeVision()
+
+    t = localtime()
+    filename = f"coords-{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}.txt"
+    # Trust Flask to handle this in a separate thread
+    f = open(filename, "w")
+    fae_vision.recording = True
+    while fae_vision.recording:
+        fae_vision.slock.acquire()
+        current_time = fae_vision.current_time
+        poses = fae_vision.orientations
+        fae_vision.orientations = list()
+        fae_vision.slock.release()
+        fae.rlock.acquire()
+        speeds = fae.currentSpeed
+        fae.rlock.release()
+        for p in poses:
+            s = "p " + str(p[0])
+            print(p)
+            q = p[1]
+            s += f" {q.scalar} {q.x} {q.y} {q.z}\n"
+            f.write(s)
+        f.write("m " + str(current_time) + " " + " ".join([str(s) for s in speeds]) + "\n")
+        f.flush()
+        sleep(0.1)
+    f.close()
+    return ""
+
+@app.route('/stop_record', methods=['POST'])
+def stop_record():
+    global fae_vision
+    fae_vision.recording = False
+    fae_vision.process.kill()
+    fae_vision = None
+    return ""
+
+
 @app.route('/position', methods=['GET', 'POST'])
 def get_position():
-    global fae
-    fae.sync()
-    return " ".join([str(x) for x in fae.lastPos])
+    return "0 0 0 0"
+    #global fae
+    #fae.sync()
+    #return " ".join([str(x) for x in fae.lastPos])
 
 
 @app.route('/targets', methods=['GET'])
@@ -382,14 +452,14 @@ def camera():
 
 
 """
-
-if gethostname() == "control" or "control" in sys.argv:
-    port = 80
-    fae = Fae()
-else:
-    port = 8000
-    #fae = Fae()
-    fae = None
-
 if __name__ == '__main__':
+    if gethostname() == "control" or "control" in sys.argv:
+        port = 80
+        fae = Fae()
+
+    else:
+        port = 8000
+        # fae = Fae()
+        fae = None
+
     app.run(host="0.0.0.0", port=port, debug=True, threaded=True)

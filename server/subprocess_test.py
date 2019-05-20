@@ -1,6 +1,5 @@
-import subprocess as sb
 from pprint import pprint
-from time import sleep, clock
+import subprocess as sb
 from threading import Thread
 
 ARTK_PATH = "../../artoolkit5/bin/simpleLite"
@@ -26,11 +25,9 @@ def artk_process():
         pass
 
 
-
 thr = Thread(target=artk_process)
 thr.start()
 
-starttime=clock()
 lastlen = 0
 try:
     while len(lines)<1000:
