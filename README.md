@@ -1,4 +1,4 @@
-![logo](logo-green.png "Company logo")
+![logo](img/logo-green.png "logo")
 
 
 # Fae bot
