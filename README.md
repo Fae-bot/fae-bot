@@ -18,6 +18,6 @@ This repository contains the software used to control the first prototype. A ful
 
 [But why?](aboutWhy.md)
 
-[A few things I learned during that project](hardwareConsiderations.md)
+[A few things I learned during that project](HardwareConsiderations.md)
 
 [Controlling it is an interesting exercise in machine learning](ControlML.md)
