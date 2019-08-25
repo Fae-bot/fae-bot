@@ -39,12 +39,12 @@ def mtime(msg=""):
 
 class FaeVision:
     ARTK_PATH = "../../artoolkit5/bin/simpleLite"
-    ARTK_ARGS = ['--vconf', '-dev=/dev/video0', '--thresh', '3']
+    ARTK_ARGS = ['--vconf', '-dev=/dev/video0', '--thresh', '0']
     SUMMATION_PERIOD = 0.2
 
     def __init__(self):
         self.process = None
-        self.orientations = list()
+        self.poses = list()
         self.thread = Thread(target = self.artk_process)
         self.thread.start()
         self.slock = Lock()
@@ -58,7 +58,6 @@ class FaeVision:
                                 env={'DISPLAY': ':0'})
         while self.process.poll() is None:
             line = self.process.stdout.readline()
-            print(line)
             arr = line.rstrip().split(" ")
             sum_v = Quaternion(scalar=0, vector=(0, 0, 0))
             sum_count = 0
@@ -69,8 +68,10 @@ class FaeVision:
                     sum_last_time = current_time
                 mat = np.array([float(a) for a in arr[1:]])
                 mat = mat.reshape(4, 4)
+                pos = mat[3,:3]
                 mat = mat[:3, :3]
                 quat = Quaternion(matrix=mat[:3, :3], force_imperfect=True)
+
                 """if current_time-sum_last_time < FaeVision.SUMMATION_PERIOD:
                     sum_v += quat
                     sum_count += 1
@@ -81,7 +82,7 @@ class FaeVision:
                 """
                 self.slock.acquire()
                 self.current_time = current_time
-                self.orientations.append((current_time, quat))
+                self.poses.append((current_time, quat, pos))
                 self.slock.release()
 
 
@@ -101,6 +102,7 @@ class Fae:
         self.currentSpeed = [0, 0, 0, 0]
         self.slock = Lock()
         self.rlock = Lock()
+        self.stopped=False
 
         # Connect to the USB serial
         devices = list()
@@ -281,7 +283,7 @@ def roll_motor(mid):
     step_size = float(request.values.get('stepsize'))
     fae.stop()
     args = [0]*fae.numMotors
-    args[int(mid)-1] = - step_size
+    args[int(mid)-1] = - speed
     fae.motors_speed(*args)
     #fae.speed_given_speed(speed)
     fae.go()
@@ -295,7 +297,7 @@ def unroll_motor(mid):
     step_size = float(request.values.get('stepsize'))
     fae.stop()
     args = [0] * fae.numMotors
-    args[int(mid) - 1] = step_size
+    args[int(mid) - 1] = speed
     fae.motors_speed(*args)
     #fae.speed_given_speed(speed)
     fae.go()
@@ -305,6 +307,7 @@ def unroll_motor(mid):
 @app.route('/stop', methods=['POST'])
 def stop_all():
     global fae
+    fae.stopped = True
     fae.stop()
     return ""
 
@@ -372,16 +375,20 @@ def move_direction(direction):
 
 @app.route('/randomize', methods=['POST'])
 def randomize():
-    # Make 6 random moves of 1 sec
-    for k in range(6):
+    # Make 12 random moves of 0.5 sec
+    fae.stopped = False
+    max_speed = float(request.values.get('speed'))
+    for k in range(12):
         motors_speed = list()
         for im in range(4):
-            v = uniform(40, 100)
+            v = uniform(max_speed, 3 * max_speed)
             v *= randint(0, 1)*2 - 1
             motors_speed.append(v)
         fae.motors_speed(*motors_speed)
         fae.go()
-        sleep(1)
+        if fae.stopped:
+            break
+        sleep(0.5)
         fae.stop()
     return ""
 
@@ -400,17 +407,18 @@ def record():
     while fae_vision.recording:
         fae_vision.slock.acquire()
         current_time = fae_vision.current_time
-        poses = fae_vision.orientations
-        fae_vision.orientations = list()
+        poses = fae_vision.poses
+        fae_vision.poses = list()
         fae_vision.slock.release()
         fae.rlock.acquire()
         speeds = fae.currentSpeed
         fae.rlock.release()
         for p in poses:
             s = "p " + str(p[0])
-            print(p)
             q = p[1]
-            s += f" {q.scalar} {q.x} {q.y} {q.z}\n"
+            pos = p[2]
+            s += f" {q.scalar} {q.x} {q.y} {q.z} {pos[0]} {pos[1]} {pos[2]}\n"
+            print(s)
             f.write(s)
         f.write("m " + str(current_time) + " " + " ".join([str(s) for s in speeds]) + "\n")
         f.flush()
@@ -423,7 +431,6 @@ def stop_record():
     global fae_vision
     fae_vision.recording = False
     fae_vision.process.kill()
-    fae_vision = None
     return ""
 
 
