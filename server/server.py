@@ -7,6 +7,7 @@
 from time import sleep, localtime
 import sys
 import serial
+import threading
 from math import sqrt
 from socket import gethostname
 from datetime import datetime as dt
@@ -23,7 +24,8 @@ app = Flask(__name__, static_url_path='/static')
 
 
 timer = dt.now()
-
+fae_vision=None
+fae_read_thread=None  # Ugly!
 
 def mtimereset():
     global timer
@@ -94,8 +96,23 @@ class MySerial(serial.Serial):
             serial.Serial.write(self, bytes(s, 'utf-8'))
 
 
+def read_line_serial(ser):
+    global fae_vision
+    while True:
+        try:
+            line = ser.readline().decode("utf-8")
+            if fae_vision is not None:
+                current_time=fae_vision.current_time
+            else:
+                current_time=-1.0
+            print(str(threading.get_ident())+" "+str(current_time)+" "+line)
+        except serial.serialutil.SerialException:
+            pass
+
 class Fae:
     def __init__(self):
+        global fae_read_thread
+        print("Hi!")
         self.numMotors = 4
         self.targetPos = [0, 0, 0, 0]
         self.lastPos = [-1, -1, -1, -1]
@@ -103,6 +120,7 @@ class Fae:
         self.slock = Lock()
         self.rlock = Lock()
         self.stopped=False
+
 
         # Connect to the USB serial
         devices = list()
@@ -116,7 +134,7 @@ class Fae:
             dev = devices[ind % len(devices)]
             try:
                 #ser = serial.Serial(dev, baudrate=9600)
-                ser = MySerial(dev, baudrate=1000000)
+                ser = MySerial(dev, baudrate=1000000, timeout=1)
                 ser.setDTR(False)
                 sleep(0.5)
                 #ser.open()
@@ -128,6 +146,11 @@ class Fae:
                 ind = ind % 8
                 sleep(1)
         self.serial = ser
+        print("freadthread:"+str(fae_read_thread))
+        if fae_read_thread==None:
+            fae_read_thread = Thread(target=read_line_serial, args=[ser])
+            print("f:"+str(fae_read_thread))
+            fae_read_thread.start()
 
         self.targets = dict()
         # Reload targets if available
@@ -217,7 +240,16 @@ class Fae:
         self.serial.flush()
         self.slock.release()
 
+    def set_feedback_freq(self, freq):
+        cmd = "f "+str(freq)+"\n\r"
+        self.slock.acquire()
+        self.serial.write(cmd)
+        print(cmd[:-1])
+        self.serial.flush()
+        self.slock.release()
+
     def sync(self):
+        return
         try:
             self.slock.acquire()
             self.serial.write("p\r\n")
@@ -466,6 +498,7 @@ if __name__ == '__main__':
     if gethostname() == "control" or "control" in sys.argv:
         port = 80
         fae = Fae()
+        fae.set_feedback_freq(500)
 
     else:
         port = 8000
