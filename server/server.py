@@ -114,7 +114,7 @@ class Fae:
             dev = devices[ind % len(devices)]
             try:
                 #ser = serial.Serial(dev, baudrate=9600)
-                ser = MySerial(dev, baudrate=9600)
+                ser = MySerial(dev, baudrate=1000000)
                 ser.setDTR(False)
                 sleep(0.5)
                 #ser.open()
@@ -180,9 +180,12 @@ class Fae:
 
     def go(self):
         self.slock.acquire()
+        print("lock acquired")
         self.serial.write("g\n")
+        print("g")
         self.serial.flush()
         self.slock.release()
+        print("lock release")
 
     def motors_speed(self, m1, m2, m3, m4):
         self.rlock.acquire()
