@@ -1,21 +1,24 @@
-int run = 0;
+// TODO: uses types with explicit bit length
 
-long last_switch[] = {0,0,0,0};
+int run = 0;
+int mode = 0;
+
+unsigned long last_switch[] = {0,0,0,0};
 int current_state[] = { LOW, LOW, LOW, LOW};
-int cycle_length[]={0, 0, 0, 0};
+unsigned long cycle_length[]={0, 0, 0, 0};
 long positions[] ={0,0,0,0};
 int directions[] = {1,1,1,1};
 long targets[4];
 
-long current_time=0;
+unsigned long current_time=0;
 int reset_counts=0;
+unsigned long last_feedback=0;
+unsigned long feedback_period=200000; // 200 ms
 
 
 
 
 const int NUM_WINCHES = 4;
-const int INTERVAL=5;
-const long RESET_INTERVAL=10000000;
 
 void setup() {
   pinMode(9, OUTPUT);
@@ -27,7 +30,7 @@ void setup() {
   pinMode(3, OUTPUT);
   pinMode(2, OUTPUT);
   digitalWrite(8, HIGH);
-  Serial.begin(9600);
+  Serial.begin(1000000);
 }
 
 void all_dirs(int dir){
@@ -40,43 +43,45 @@ void all_dirs(int dir){
 
 void loop() {
   if(run==1){
-    if(current_time>RESET_INTERVAL){
-      
-          for(int i=0;i<NUM_WINCHES;i++){
-            last_switch[i] -= current_time;
-      }
-      current_time = 0;
-      reset_counts++;
-    }
-    
+    current_time=micros();
+
     for(int i=0;i<NUM_WINCHES;i++){
       if(cycle_length[i]==0) continue;
-      if(last_switch[i]+cycle_length[i]<current_time){
+      if(current_time-last_switch[i] > cycle_length[i]){
         if(current_state[i]==LOW) current_state[i]=HIGH; else current_state[i]=LOW;
         digitalWrite(9-i*2, current_state[i]);
-        last_switch[i]=current_time;
+        last_switch[i] = current_time;
         positions[i] += directions[i];
       }
     }
     
-    current_time+=INTERVAL;
+    if(feedback_period>0){
+        if(current_time-last_feedback>feedback_period){
+            for(int i=0;i<NUM_WINCHES;i++){
+              Serial.print(positions[i]);
+              Serial.print(' ');
+            }
+            Serial.print('\n');
+            last_feedback = current_time;
+        }
+    }
 
-    for(int i=0;i<NUM_WINCHES;i++){
-      if(targets[i]>positions[i]){
-        directions[i]=1;
-        digitalWrite(8-i*2, HIGH);         // Not necessary every cycle
-      }
-      if(targets[i]<positions[i]){
-        directions[i]=-1;
-        digitalWrite(128-i*2, LOW);          // Not necessary every cycle
-      }
-      if(targets[i]==positions[i]){
-        cycle_length[i]=0;
-      }
+    if(mode==1){  // Are we in target mode?
+        for(int i=0;i<NUM_WINCHES;i++){
+          if(targets[i]>positions[i]){
+            directions[i]=1;
+            digitalWrite(8-i*2, HIGH);         // Not necessary every cycle
+          }
+          if(targets[i]<positions[i]){
+            directions[i]=-1;
+            digitalWrite(128-i*2, LOW);          // Not necessary every cycle
+          }
+          if(targets[i]==positions[i]){
+            cycle_length[i]=0;
+          }
+        }
     }
   }
-  delayMicroseconds(INTERVAL);
-
 
   while(Serial.available() > 0){
     char c = Serial.read();
@@ -131,7 +136,14 @@ void loop() {
     if(c=='r') {          // Check resets
       Serial.print(current_time);
       Serial.println(reset_counts);
-    }    
+    }
+    if(c=='p') {           // Motor <ID> <speed>
+      mode = Serial.parseInt();
+      if(mode!=0) mode=1;
+    }
+    if(c=='f') {           // Motor <ID> <speed>
+      feedback_period = Serial.parseInt()*1000;
+    }
   }
 }
 
