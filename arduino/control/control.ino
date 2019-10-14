@@ -42,9 +42,20 @@ void all_dirs(int dir){
 
 
 void loop() {
+  current_time=micros();
+  if(feedback_period>0){
+      if(current_time-last_feedback>feedback_period){
+          for(int i=0;i<NUM_WINCHES;i++){
+            Serial.print(positions[i]);
+            Serial.print(' ');
+          }
+          Serial.print('\n');
+          last_feedback = current_time;
+      }
+  }
+    
   if(run==1){
-    current_time=micros();
-
+    
     for(int i=0;i<NUM_WINCHES;i++){
       if(cycle_length[i]==0) continue;
       if(current_time-last_switch[i] > cycle_length[i]){
@@ -54,17 +65,7 @@ void loop() {
         positions[i] += directions[i];
       }
     }
-    
-    if(feedback_period>0){
-        if(current_time-last_feedback>feedback_period){
-            for(int i=0;i<NUM_WINCHES;i++){
-              Serial.print(positions[i]);
-              Serial.print(' ');
-            }
-            Serial.print('\n');
-            last_feedback = current_time;
-        }
-    }
+
 
     if(mode==1){  // Are we in target mode?
         for(int i=0;i<NUM_WINCHES;i++){
