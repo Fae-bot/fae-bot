@@ -12,16 +12,15 @@ from math import sqrt
 from socket import gethostname
 from datetime import datetime as dt
 import json
-from flask import Flask, render_template_string, render_template, request, send_file, make_response
 from threading import Lock
 import subprocess as sb
 from threading import Thread
 import numpy as np
 from fae_quaternion import Quaternion
 from random import randint, uniform
-
-app = Flask(__name__, static_url_path='/static')
-
+from http.server import HTTPServer, BaseHTTPRequestHandler, HTTPStatus
+import socketserver
+import re
 
 timer = dt.now()
 fae_vision=None
@@ -38,6 +37,59 @@ def mtime(msg=""):
     print(msg + ":" + " "*(15-len(msg))+str((n-timer).total_seconds()*1000)+" ms")
     timer = n
 
+
+global handlers_dict
+handlers_dict = dict()
+
+
+def route(path, methods=["GET"]):
+    global handlers_dict
+
+    def wrap(func):
+        handlers_dict[path] = (func, methods)
+        return func
+    return wrap
+
+
+class FaeHttpHandler(BaseHTTPRequestHandler):
+    def do_answer(self):
+        global handlers_dict
+        for p in handlers_dict.keys():
+            m = re.match(p + "$", self.path)
+            if m:
+                print("m", m)
+                print("p", p)
+                if m.lastindex is None:
+                    args = []
+                else:
+                    args = [m[i] for i in range(1, m.lastindex + 1)]
+                print("args ", args)
+                values = dict()
+                if "Content-Length" in self.headers:
+                    content_length = int(self.headers['Content-Length'])
+                    post_data = self.rfile.read(content_length).decode("ascii")
+                    print(post_data)
+                    for eq in post_data.split("&"):
+                        k, v = eq.split("=")
+                        values[k]=v
+
+                if "POST" in handlers_dict[p][1]:
+                    print(values)
+                    answer = handlers_dict[p][0](request_values=values, *args)
+                else:
+                    answer = handlers_dict[p][0](*args)
+                self.send_response(HTTPStatus.OK)
+                # self.send_header("Content-type", "text/html;charset=utf-8")
+                self.send_header("Content-Length", str(len(answer)))
+                self.end_headers()
+                self.wfile.write(answer.encode("ascii"))
+                return
+
+    def do_GET(self):
+        return self.do_answer()
+
+    def do_POST(self):
+        return self.do_answer()
 
 class FaeVision:
     ARTK_PATH = "../../artoolkit5/bin/simpleLite"
@@ -306,16 +358,22 @@ class Fae:
             fb.write(k + " " + " ".join([str(c) for c in v]) + "\n")
 
 
-@app.route('/')
+@route('/')
 def index():
-    return render_template("index.html")
+    return open("static/index.html").read()
 
 
-@app.route('/motors/<mid>/roll', methods=['POST'])
-def roll_motor(mid):
+@route('/static/(.*)')
+def serve_static_file(path):
+    # TODO: paths are not jailed in /static/
+    return open("static/"+path).read()
+
+
+@route('/motors/([^\/]*)/roll', methods=['POST'])
+def roll_motor(mid, request_values):
     global fae
-    speed = float(request.values.get('speed'))
-    step_size = float(request.values.get('stepsize'))
+    speed = float(request_values.get('speed'))
+    step_size = float(request_values.get('stepsize'))
     fae.stop()
     args = [0]*fae.numMotors
     args[int(mid)-1] = - speed
@@ -325,11 +383,11 @@ def roll_motor(mid):
     return ""
 
 
-@app.route('/motors/<mid>/unroll', methods=['POST'])
-def unroll_motor(mid):
+@route('/motors/([^\/]*)/unroll', methods=['POST'])
+def unroll_motor(mid, request_values):
     global fae
-    speed = float(request.values.get('speed'))
-    step_size = float(request.values.get('stepsize'))
+    speed = float(request_values.get('speed'))
+    step_size = float(request_values.get('stepsize'))
     fae.stop()
     args = [0] * fae.numMotors
     args[int(mid) - 1] = speed
@@ -339,16 +397,16 @@ def unroll_motor(mid):
     return ""
 
 
-@app.route('/stop', methods=['POST'])
-def stop_all():
+@route('/stop', methods=['POST'])
+def stop_all(request_values):
     global fae
     fae.stopped = True
     fae.stop()
     return ""
 
 
-@app.route('/set_target/<tid>', methods=['POST'])
-def set_target(tid):
+@route('/set_target/([^\/]*)', methods=['POST'])
+def set_target(tid, request_values):
     global fae
     fae.sync()
     fae.targets[str(tid)] = list(fae.lastPos)
@@ -357,11 +415,11 @@ def set_target(tid):
     return " ".join([str(x) for x in fae.lastPos])
 
 
-@app.route('/go_target/<tid>', methods=['POST'])
-def go_target(tid):
+@route('/go_target/([^\/]*)', methods=['POST'])
+def go_target(tid, request_values):
     global fae
     fae.stop()
-    speed = float(request.values.get('speed'))
+    speed = float(request_values.get('speed'))
     print(tid)
     print(fae.targets)
     fae.target(*fae.targets[str(tid)])
@@ -371,14 +429,14 @@ def go_target(tid):
     return ""
 
 
-@app.route('/direction/<direction>', methods=['POST'])
-def move_direction(direction):
+@route('/direction/([^\/]*)', methods=['POST'])
+def move_direction(direction, request_values):
     global fae
     mtimereset()
     fae.stop()
     mtime("stop")
-    speed = float(request.values.get('speed'))
-    step_size = float(request.values.get('stepsize'))
+    speed = float(request_values.get('speed'))
+    step_size = float(request_values.get('stepsize'))
 
     if direction == "n":
         fae.delta(step_size, step_size, -step_size, -step_size)
@@ -408,11 +466,11 @@ def move_direction(direction):
     return ""
 
 
-@app.route('/randomize', methods=['POST'])
-def randomize():
+@route('/randomize', methods=['POST'])
+def randomize(request_values):
     # Make 12 random moves of 0.5 sec
     fae.stopped = False
-    max_speed = float(request.values.get('speed'))
+    max_speed = float(request_values.get('speed'))
     for k in range(12):
         motors_speed = list()
         for im in range(4):
@@ -428,8 +486,8 @@ def randomize():
     return ""
 
 
-@app.route('/record', methods=['POST'])
-def record():
+@route('/record', methods=['POST'])
+def record(request_values):
     global fae_vision
     print("Starting fae vision")
     fae_vision = FaeVision()
@@ -461,28 +519,28 @@ def record():
     f.close()
     return ""
 
-@app.route('/stop_record', methods=['POST'])
-def stop_record():
+@route('/stop_record', methods=['POST'])
+def stop_record(request_values):
     global fae_vision
     fae_vision.recording = False
     fae_vision.process.kill()
     return ""
 
 
-@app.route('/position', methods=['GET', 'POST'])
-def get_position():
+@route('/position', methods=['GET', 'POST'])
+def get_position(request_values={}):
     return "0 0 0 0"
     #global fae
     #fae.sync()
     #return " ".join([str(x) for x in fae.lastPos])
 
 
-@app.route('/targets', methods=['GET'])
+@route('/targets', methods=['GET'])
 def get_targets():
     global fae
     return json.dumps(fae.targets)
 
-"""@app.route('/camera',methods=['GET'])
+"""@route('/camera',methods=['GET'])
 def camera():
     subprocess.call(["fswebcam", "-r", "640x480", "--no-banner", "--no-overlay", "--no-underlay", "--save", "/tmp/image.jpg"])
         try:
@@ -505,4 +563,6 @@ if __name__ == '__main__':
         # fae = Fae()
         fae = None
 
-    app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
+    #app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
+    httpd = HTTPServer(("", port), FaeHttpHandler)
+    httpd.serve_forever()
