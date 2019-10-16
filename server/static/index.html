@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel="stylesheet" href="/static/range.css">
+	<title>Wirebot control</title>
+	<link rel="icon"
+      type="image/png"
+      href="/static/favicon.ico">
+</head>
+<body>
+
+    <script>
+
+var claw_url = "http://claw.fae.bot:5001"
+//var claw_url = "http://0.0.0.0:5001"
+
+var forcerefresh = 0;
+function refresh_image() {
+  document.getElementById("camera").src="http://192.168.44.2:5001/camera?refresh="+forcerefresh;
+  forcerefresh=forcerefresh+1;
+}
+
+function post(url) {
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", url, true);
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhr.send("stepsize="+stepSizeValue+"&speed="+speedValue);
+}
+
+function postsimple(url) {
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", url, true);
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhr.send();
+}
+
+function moveClaw(pos){
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", claw_url + "/claw/"+pos, true);
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhr.send();
+}
+
+function set_target(i) {
+	var xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function() {
+		if (xhr.readyState === 4) {
+		  document.getElementById("targetPos"+i).innerHTML=xhr.response;
+		}
+	  }
+	xhr.open("POST", "/set_target/"+i, true);
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhr.send("stepsize="+stepSizeValue+"&speed="+speedValue);
+
+}
+
+var stepSizeValue;
+var speedValue;
+function updateValue() {
+	var multiplierStepSize = 50;
+	var multiplierSpeed = 5;
+	var thresholdSpeed = 5;
+
+	sliderSize = document.getElementById('stepSize');
+	labelSize = document.getElementById('stepSizeDisplay');
+	sliderSpeed = document.getElementById('speed');
+	labelSpeed = document.getElementById('speedDisplay');
+	stepSizeValue = sliderSize.value*multiplierStepSize;
+	speedValue = sliderSpeed.value;
+	if(speedValue > 100){
+		speedValue = 100 + (speedValue-100) * multiplierSpeed;
+	}
+
+	labelSize.innerHTML = 'Step size = '+stepSizeValue;
+	labelSpeed.innerHTML = 'Speed = '+speedValue;
+}
+
+function updateDebugPos(){
+	var xhr = new XMLHttpRequest();
+
+	xhr.onreadystatechange = function() {
+		if (xhr.readyState === 4) {
+		  document.getElementById("debugPos").innerHTML=xhr.response;
+		}
+	  }
+
+    xhr.open("GET", "/position", true);
+    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhr.send("");
+}
+
+var servoPos=90;
+function updateServo() {
+	servoPos = document.getElementById("clawPos").value;
+	document.getElementById("clawDisplay").innerHTML="Claw pos = "+servoPos;
+}
+
+var servoPos=90;
+function updateServo() {
+	servoPos = document.getElementById("clawPos").value;
+	document.getElementById("clawDisplay").innerHTML="Claw pos = "+servoPos;
+}
+
+var targets;
+function updateTargets() {
+	var xhr = new XMLHttpRequest();
+
+	xhr.onreadystatechange = function() {
+		if (xhr.readyState === 4) {
+		  targets = JSON.parse(xhr.response)
+		  for(var i=0;i<10;i++){
+		    document.getElementById("targetPos"+i).innerHTML=targets[""+i];
+	      }
+		}
+	  }
+
+    xhr.open("GET", "/targets", true);
+    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhr.send("");
+}
+
+function ge(id){
+	return document.getElementById(id);
+	}
+
+function toggleVisible(id){
+	if(ge(id).style.display == 'none'){
+		ge(id).style.display = 'block';
+	}
+	else{
+		ge(id).style.display = 'none';
+	}
+}
+
+//window.onload = function(){ updateValue(); updateServo; updateTargets(); updateDebugPos()};
+window.onload = function(){ toggleVisible('targets-table');}
+</script>
+
+<style>
+div {font-size: 32px;text-align:center;}
+div.motor-console {text-align:center; width:49%; position: relative; float:left; border-style:solid; border-width:1px;margin:2px;}
+span.motor-console {text-align:center; width:99%; position: relative; float:left; border-style:solid; border-width:1px; margin:2px;}
+.button {font-size: 32px; background-color: #aaffaa; text-align:center;}
+.button-dark {font-size: 32px; background-color: #55ff55; text-align:center;}
+.button-light {font-size: 32px; background-color: #aaffaa; text-align:center;}
+.button-gray {font-size: 32px; background-color: lightgray; text-align:center;}
+div.button-grid { width:90%; font-size: 32px; background-color: #aaffaa; }
+.button-stop { font-size: 32px; background-color: #ff8888; }
+.debug {font-size:12px;}
+.directions-control {display: none;} // deactivated for now
+.claw-control {display: none;} // deactivated for now
+
+</style>
+
+<div class="display-big" id="stepSizeDisplay">Step size = 150</div>
+<div><input id="stepSize" type="range" onmousemove="updateValue()" ontouchmove="updateValue()" max="300"/></div>
+<div class="display-big" id="speedDisplay">Speed = 300</div>
+<div><input id="speed" type="range" onmousemove="updateValue()" ontouchmove="updateValue()" min="1" max="200" value="140"/></div>
+
+<div class='directions-control'>
+<table width=100%>
+	<tr>
+		<td><div onClick='post("direction/nw")' class='button-dark'>&#8662;</div></td>
+		<td><div onClick='post("direction/n")' class='button-light'>&#x21D1;</div></td>
+		<td><div onClick='post("direction/ne")' class='button-dark'>&#x21D7;</div></td>
+		<td><div onClick='post("direction/up")' class='button-light'>UP</div></td>
+	</tr>
+	<tr>
+		<td><div onClick='post("direction/w")' class='button-light'>&#x21D0;</div></td>
+		<td><div onClick='post("stop")' class='button-stop'>X</div></td>
+		<td><div onClick='post("direction/e")' class='button-light'>&#x21D2;</div></td>
+		<td><div class="debug" id="debugPos">-</div></td>
+	</tr>
+	<tr>
+		<td><div onClick='post("direction/sw")' class='button-dark'>&#x21D9;</div></td>
+		<td><div onClick='post("direction/s")' class='button-light'>&#x21D3;</div></td>
+		<td><div onClick='post("direction/se")' class='button-dark'>&#x21D8;</div></td>
+		<td><div onClick='post("direction/down")' class='button-dark'>DOWN</div></td>
+	</tr>
+</table>
+</div>
+<div class="claw-control">
+	<span class='motor-console'>
+		CLAW:
+		<span class='button-dark' onClick='postsimple(claw_url+"/claw/go_open")'>OPEN</span>
+		&nbsp;
+		<span class='button-light' onClick='postsimple(claw_url+"/claw/go_closed")'>CLOSE</span>
+	</span>
+</div>
+<br/>
+
+<div class="targets-control">
+	<div onClick="toggleVisible('targets-table')">TARGETS</div>
+	<div id="targets-table" >
+	<table style="max-width:500px; width:100%; ">
+		<tr>
+			<td class='button-gray' onClick='set_target(1)'>SET</td>
+			<td>1</td>
+			<td class='button-dark' onClick='post("/go_target/1")'>GO</td>
+			<td><div class="debug" id="targetPos1"></div></td>
+		</tr>
+		<tr>
+			<td class='button-gray' onClick='set_target(2)'>SET</td>
+			<td>2</td>
+			<td class='button-dark' onClick='post("/go_target/2")'>GO</td>
+			<td><div class="debug" id="targetPos2"></div></td>
+		</tr>
+		<tr>
+			<td class='button-gray' onClick='set_target(3)'>SET</td>
+			<td>3</td>
+			<td class='button-dark' onClick='post("/go_target/3")'>GO</td>
+			<td><div class="debug" id="targetPos3"></div></td>
+		</tr>
+		<tr>
+			<td class='button-gray' onClick='set_target(4)'>SET</td>
+			<td>4</td>
+			<td class='button-dark' onClick='post("/go_target/4")'>GO</td>
+			<td><div class="debug" id="targetPos4"></div></td>
+		</tr>
+		<tr>
+			<td class='button-gray' onClick='set_target(5)'>SET</td>
+			<td>5</td>
+			<td class='button-dark' onClick='post("/go_target/5")'>GO</td>
+			<td><div class="debug" id="targetPos5"></div></td>
+		</tr>
+		<tr>
+			<td class='button-gray' onClick='set_target(6)'>SET</td>
+			<td>6</td>
+			<td class='button-dark' onClick='post("/go_target/6")'>GO</td>
+			<td><div class="debug" id="targetPos6"></div></td>
+		</tr>
+		<tr>
+			<td class='button-gray' onClick='set_target(7)'>SET</td>
+			<td>7</td>
+			<td class='button-dark' onClick='post("/go_target/7")'>GO</td>
+			<td><div class="debug" id="targetPos7"></div></td>
+		</tr>
+		<tr>
+			<td class='button-gray' onClick='set_target(8)'>SET</td>
+			<td>8</td>
+			<td class='button-dark' onClick='post("/go_target/8")'>GO</td>
+			<td><div class="debug" id="targetPos8"></div></td>
+		</tr>
+		<tr>
+			<td class='button-gray' onClick='set_target(9)'>SET</td>
+			<td>9</td>
+			<td class='button-dark' onClick='post("/go_target/9")'>GO</td>
+			<td><div class="debug" id="targetPos9"></div></td>
+		</tr>
+		<tr>
+			<td class='button-gray' onClick='set_target(10)'>SET</td>
+			<td>10</td>
+			<td class='button-dark' onClick='post("/go_target/10")'>GO</td>
+			<td><div class="debug" id="targetPos10"></div></td>
+		</tr>
+	</table>
+	</div>
+</div>
+<div><label><input type="checkbox" id="debugCheckBox"
+				   onclick="
+				   if(checked){
+				   	 value = setInterval(updateDebugPos, document.getElementById('debugInterval').value);
+				   	 }
+				   else{
+				     clearInterval(value);
+				     }">
+	Debug</label> | Interval:<input type="text" id="debugInterval" value="1000"></div>
+<!-- <img src="/camera" onClick="refresh_image()" id="camera" > -->
+<!--		<span class='motor-console'>
+			<div class="display-big" id="clawDisplay">Claw pos = 90</div>
+			<div><input id="clawPos" type="range" onmousemove="updateServo()" ontouchmove="updateServo()" max="180"/></div>
+			<div><span class="button" onClick='postsimple(claw_url+"/claw/"+servoPos)'>TEST</span></div>
+			<div class="button" onClick='postsimple(claw_url+"/claw/set_open/"+servoPos)'>SET OPEN POS</div>
+			<div class="button" onClick='postsimple(claw_url+"/claw/set_closed/"+servoPos)'>SET CLOSED POS</div>
+
+		</span> -->
+
+
+	<div onClick='post("stop")' class='button-stop' width="100%" >STOP</div>
+
+<div>
+	<div class='motor-console'>
+		MOTOR 3
+		<div class='button-dark' onClick='post("/motors/3/roll")'>ROLL</div>
+		<div class='button-light' onClick='post("/motors/3/unroll")'>UNROLL</div>
+	</div>
+	<div class='motor-console'>
+		MOTOR 4
+		<div class='button-dark' onClick='post("/motors/4/roll")'>ROLL</div>
+		<div class='button-light' onClick='post("/motors/4/unroll")'>UNROLL</div>
+	</div>	
+	<div class='motor-console'>
+		MOTOR 1
+		<div class='button-dark' onClick='post("/motors/1/roll")'>ROLL</div>
+		<div class='button-light' onClick='post("/motors/1/unroll")'>UNROLL</div>
+	</div>	<div class='motor-console'>
+			MOTOR 2
+			<div class='button-dark' onClick='post("/motors/2/roll")'>ROLL</div>
+			<div class='button-light' onClick='post("/motors/2/unroll")'>UNROLL</div>
+		</div>
+</div>
+<div width="100%"><span onClick='post("randomize")' class='button-stop' width="100%">RANDOM MOVE</span></div>
+<div width="100%"><span onClick='post("record")' class='button-stop' width="100%">RECORD</span></div>
+<div width="100%"><span onClick='post("stop_record")' class='button-stop' width="100%">STOP RECORD</span></div>
+</body>
