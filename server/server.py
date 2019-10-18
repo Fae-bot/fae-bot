@@ -482,9 +482,9 @@ def randomize(request_values):
             motors_speed.append(v)
         fae.motors_speed(*motors_speed)
         fae.go()
+        sleep(3.0)
         if fae.stopped:
             break
-        sleep(3.0)
         fae.stop()
     return ""
 
