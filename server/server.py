@@ -524,7 +524,8 @@ def record(request_values):
             s = "f " + str(mp)+"\n"
             print(s)
             f.write(s)
-        f.write("m " + str(current_time) + " " + " ".join([str(s) for s in speeds]) + "\n")
+        if not fae.stopped:
+            f.write("m " + str(current_time) + " " + " ".join([str(s) for s in speeds]) + "\n")
         f.flush()
         sleep(0.1)
     f.close()
