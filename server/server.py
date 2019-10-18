@@ -42,6 +42,10 @@ global handlers_dict
 handlers_dict = dict()
 
 
+class ThreadingHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+
+
 def route(path, methods=["GET"]):
     global handlers_dict
 
@@ -109,7 +113,8 @@ class FaeVision:
         self.process = sb.Popen([FaeVision.ARTK_PATH] + FaeVision.ARTK_ARGS,
                                 stdout=sb.PIPE,
                                 encoding="utf-8",
-                                env={'DISPLAY': ':0'})
+                                #env={'DISPLAY': ':0'}
+                                )
         while self.process.poll() is None:
             line = self.process.stdout.readline()
             arr = line.rstrip().split(" ")
@@ -150,28 +155,28 @@ class MySerial(serial.Serial):
 
 def read_line_serial(ser):
     global fae_vision
+    global fae
     while True:
         try:
             line = ser.readline().decode("utf-8")
             if fae_vision is not None:
                 current_time=fae_vision.current_time
-            else:
-                current_time=-1.0
-            print(str(threading.get_ident())+" "+str(current_time)+" "+line)
+                fae.motor_poses.append(str(current_time)+" "+line)
+
         except serial.serialutil.SerialException:
             pass
 
 class Fae:
     def __init__(self):
         global fae_read_thread
-        print("Hi!")
         self.numMotors = 4
         self.targetPos = [0, 0, 0, 0]
         self.lastPos = [-1, -1, -1, -1]
         self.currentSpeed = [0, 0, 0, 0]
         self.slock = Lock()
         self.rlock = Lock()
-        self.stopped=False
+        self.stopped = False
+        self.motor_poses = list()
 
 
         # Connect to the USB serial
@@ -198,7 +203,6 @@ class Fae:
                 ind = ind % 8
                 sleep(1)
         self.serial = ser
-        print("freadthread:"+str(fae_read_thread))
         if fae_read_thread==None:
             fae_read_thread = Thread(target=read_line_serial, args=[ser])
             print("f:"+str(fae_read_thread))
@@ -217,7 +221,6 @@ class Fae:
         except Exception as e:
             print(e)
             pass
-        print(" * Targets: " + str(self.targets))
         # Reload last position
         try:
             f = open("last_pos")
@@ -468,7 +471,7 @@ def move_direction(direction, request_values):
 
 @route('/randomize', methods=['POST'])
 def randomize(request_values):
-    # Make 12 random moves of 0.5 sec
+    # Make 12 random moves of 3.0 sec
     fae.stopped = False
     max_speed = float(request_values.get('speed'))
     for k in range(12):
@@ -481,7 +484,7 @@ def randomize(request_values):
         fae.go()
         if fae.stopped:
             break
-        sleep(0.5)
+        sleep(3.0)
         fae.stop()
     return ""
 
@@ -491,7 +494,7 @@ def record(request_values):
     global fae_vision
     print("Starting fae vision")
     fae_vision = FaeVision()
-
+    print("ha")
     t = localtime()
     filename = f"coords-{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}.txt"
     # Trust Flask to handle this in a separate thread
@@ -505,12 +508,20 @@ def record(request_values):
         fae_vision.slock.release()
         fae.rlock.acquire()
         speeds = fae.currentSpeed
+        mposes = fae.motor_poses
+        fae.motor_poses = list()
+
         fae.rlock.release()
         for p in poses:
             s = "p " + str(p[0])
             q = p[1]
             pos = p[2]
             s += f" {q.scalar} {q.x} {q.y} {q.z} {pos[0]} {pos[1]} {pos[2]}\n"
+            print(s)
+            f.write(s)
+        #f.write("m " + str(current_time) + " " + " ".join([str(s) for s in speeds]) + "\n")
+        for mp in mposes:
+            s = "f " + str(mp)+"\n"
             print(s)
             f.write(s)
         f.write("m " + str(current_time) + " " + " ".join([str(s) for s in speeds]) + "\n")
@@ -556,7 +567,7 @@ if __name__ == '__main__':
     if gethostname() == "control" or "control" in sys.argv:
         port = 80
         fae = Fae()
-        fae.set_feedback_freq(500)
+        fae.set_feedback_freq(50)
 
     else:
         port = 8000
@@ -564,5 +575,5 @@ if __name__ == '__main__':
         fae = None
 
     #app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
-    httpd = HTTPServer(("", port), FaeHttpHandler)
+    httpd = ThreadingHTTPServer(("", port), FaeHttpHandler)
     httpd.serve_forever()
