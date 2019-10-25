@@ -2,6 +2,7 @@
 
 import os
 import numpy as np
+import random
 
 # State machine:
 # 0: skip everything until a "f -1 ..." line happens, which means a new record session is happening and the timestamps are being reset
@@ -90,7 +91,7 @@ def create_training_pairs(ticks, poses):
     # Let's make pairs over a 9 seconds window:
     start_ind = 0
     end_ind = 1
-    while fullposes[end_ind][0]-fullposes[start_ind][0]<6.0 and end_ind<len(fullposes)-1:
+    while fullposes[end_ind][0]-fullposes[start_ind][0]<9.0 and end_ind<len(fullposes)-1:
         end_ind+=1
     while end_ind<len(fullposes)-1:
         delta_ticks = [fullposes[end_ind][i]-fullposes[start_ind][i] for i in range(1,5)]
@@ -101,16 +102,16 @@ def create_training_pairs(ticks, poses):
     # Let's make pairs over a 12 seconds window:
     start_ind = 0
     end_ind = 1
-    while fullposes[end_ind][0]-fullposes[start_ind][0]<6.0 and end_ind<len(fullposes)-1:
+    while fullposes[end_ind][0]-fullposes[start_ind][0]<12.0 and end_ind<len(fullposes)-1:
         end_ind+=1
     while end_ind<len(fullposes)-1:
         delta_ticks = [fullposes[end_ind][i]-fullposes[start_ind][i] for i in range(1,5)]
         pairs.append(fullposes[start_ind][5:] + delta_ticks + fullposes[end_ind][5:])
         start_ind+=1
         end_ind+=1
-    
 
     return pairs
+
 
 def normalize_columns(arr, cols=[]):
     norm_factors=list()
@@ -122,14 +123,18 @@ def normalize_columns(arr, cols=[]):
         norm_factors.append((c, offset, scale))
     return norm_factors
 
-def load_dataset(dirname):
+
+def load_dataset(dirname, shuffle=True, return_scale_parameters=False):
     pairs = list()
     for f in os.listdir(dirname):
-        t,p = parse_file(dirname+f)
-        pairs += create_training_pairs(t,p)
-    src_poses = np.array(pairs)[...,0:7]
-    delta_ticks = np.array(pairs)[...,7:11]
-    dst_poses = np.array(pairs)[...,11:]
+        t, p = parse_file(dirname + f)
+        pairs += create_training_pairs(t, p)
+    if shuffle:
+        random.seed(0)  # Makes sure the shuffling is deterministic
+        random.shuffle(pairs)
+    src_poses = np.array(pairs)[..., 0:7]
+    delta_ticks = np.array(pairs)[..., 7:11]
+    dst_poses = np.array(pairs)[..., 11:]
 
     # mp_ = Motors Prediction model
     # pp_ = Position Prediction model
@@ -139,11 +144,39 @@ def load_dataset(dirname):
 
     mp_input = np.concatenate((src_poses, dst_poses), axis=1)
     mp_output = np.array(delta_ticks)
-    
-    normalize_columns(pp_input, [4,5,6,7,8,9,10])
-    normalize_columns(pp_output, [4,5,6])
-    normalize_columns(mp_input, [4,5,6,11,12,13])
-    normalize_columns(mp_output, [0,1,2,3])
-    
-    return(pp_input, pp_output, mp_input, mp_output)
+
+    n1 = normalize_columns(pp_input, [4, 5, 6, 7, 8, 9, 10])
+    n2 = normalize_columns(pp_output, [4, 5, 6])
+    n3 = normalize_columns(mp_input, [4, 5, 6, 11, 12, 13])
+    n4 = normalize_columns(mp_output, [0, 1, 2, 3])
+
+    if return_scale_parameters:
+        return pp_input, pp_output, mp_input, mp_output, (n1, n2, n3, n4)
+    else:
+        return pp_input, pp_output, mp_input, mp_output
+
+
+# mmp = Mini Motor Prediction. We remove the destination quaternion from the input
+def load_dataset_mmp(dirname, shuffle=True, return_scale_parameters=False):
+    pairs = list()
+    for f in os.listdir(dirname):
+        t, p = parse_file(dirname + f)
+        pairs += create_training_pairs(t, p)
+    if shuffle:
+        random.seed(0)  # Makes sure the shuffling is deterministic
+        random.shuffle(pairs)
+    src_poses = np.array(pairs)[..., 0:7]
+    delta_ticks = np.array(pairs)[..., 7:11]
+    dst_poses = np.array(pairs)[..., -3:]
+
+    mp_input = np.concatenate((src_poses, dst_poses), axis=1)
+    mp_output = np.array(delta_ticks)
+
+    n1 = normalize_columns(mp_input, [4, 5, 6, 7, 8, 9])
+    n2 = normalize_columns(mp_output, [0, 1, 2, 3])
+
+    if return_scale_parameters:
+        return mp_input, mp_output, (n1, n2)
+    else:
+        return mp_input, mp_output
 
