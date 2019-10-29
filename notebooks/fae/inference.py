@@ -10,6 +10,6 @@ class InferenceModel:
 
     def inference(self, ins):
         norm_ins = (ins-self.input_scale_factors[0])/self.input_scale_factors[1]
-        norm_outs = self.model.predict(np.array([norm_ins]))[0]
+        norm_outs = self.model.predict(norm_ins)[0]
         outs = norm_outs * self.output_scale_factors[1] + self.output_scale_factors[0]
         return outs

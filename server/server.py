@@ -26,11 +26,14 @@ from fae.inference import InferenceModel
 
 import numpy as np
 import keras
+import tensorflow as tf
 from keras.models import load_model
+from keras.backend import set_session
 
 timer = dt.now()
 fae_vision=None
 fae_read_thread=None  # Ugly!
+
 
 def mtimereset():
     global timer
@@ -184,6 +187,9 @@ class Fae:
         self.rlock = Lock()
         self.stopped = False
         self.motor_poses = list()
+        self.keras_session = tf.Session()
+        self.tf_graph = tf.get_default_graph()
+        set_session(self.keras_session)
         self.model = InferenceModel("../notebooks/models/fae.mmp.20191025.bin")
 
 
@@ -213,7 +219,7 @@ class Fae:
         self.serial = ser
         if fae_read_thread==None:
             fae_read_thread = Thread(target=read_line_serial, args=[ser])
-            print("f:"+str(fae_read_thread))
+            #print("f:"+str(fae_read_thread))
             fae_read_thread.start()
 
         self.targets = dict()
@@ -330,14 +336,20 @@ class Fae:
 
     def delta_pos(self, dx, dy, dz):
         global fae_vision
-        if fae_vision is not None:
-            fae_vision.slock.acquire()
-            last_pose = fae_vision.poses[-1]
-            fae_vision.slock.release()
-            q = last_pose[1]
-            newpos = [last_pose[2][0]+dx, last_pose[2][1]+dy, last_pose[2][2]+dz]
-            last_pose = [q.scalar, q.x, q.y, q.z] + last_pose[2]
-            target = self.model.inference(np.array([last_pose + newpos]))
+        global tf_graph
+        with self.tf_graph.as_default():
+            set_session(self.keras_session)
+            if fae_vision is not None:
+                fae_vision.slock.acquire()
+                last_pose = fae_vision.poses[-1]
+                fae_vision.slock.release()
+                q = last_pose[1]
+                newpos = [last_pose[2][0]+dx, last_pose[2][1]+dy, last_pose[2][2]+dz]
+                last_pose = list([q.scalar, q.x, q.y, q.z]) + list(last_pose[2])
+                ins = np.array([last_pose + newpos])
+                print("Ins = "+str(ins))
+                target = self.model.inference(ins)
+
         self.zero()
         self.target(*target)
         self.mode(1)
@@ -444,6 +456,7 @@ def stop_all(request_values):
     global fae
     fae.stopped = True
     fae.stop()
+    fae.mode(0)
     return ""
 
 
@@ -481,25 +494,35 @@ def move_direction(direction, request_values):
     step_size = float(request_values.get('stepsize'))
 
     if direction == "n":
-        fae.delta(step_size, step_size, -step_size, -step_size)
+        #fae.delta(step_size, step_size, -step_size, -step_size)
+        fae.delta_pos(0, 0, -step_size)
     if direction == "s":
-        fae.delta(-step_size, -step_size, step_size, step_size)
+        #fae.delta(-step_size, -step_size, step_size, step_size)
+        fae.delta_pos(0, 0, step_size)
     if direction == "w":
-        fae.delta(-step_size, step_size, -step_size, step_size)
+        #fae.delta(-step_size, step_size, -step_size, step_size)
+        fae.delta_pos(-step_size, 0, 0)
     if direction == "e":
-        fae.delta(step_size, -step_size, step_size, -step_size)
+        #fae.delta(step_size, -step_size, step_size, -step_size)
+        fae.delta_pos(step_size, 0, 0)
     if direction == "nw":
-        fae.delta(0, step_size, -step_size, 0)
+        #fae.delta(0, step_size, -step_size, 0)
+        fae.delta_pos(-step_size, 0, -step_size)
     if direction == "ne":
-        fae.delta(step_size, 0, 0, -step_size)
+        #fae.delta(step_size, 0, 0, -step_size)
+        fae.delta_pos(step_size, 0, -step_size)
     if direction == "se":
-        fae.delta(0, -step_size, step_size, 0)
+        #fae.delta(0, -step_size, step_size, 0)
+        fae.delta_pos(step_size, 0, step_size)
     if direction == "sw":
-        fae.delta(-step_size, 0, 0, step_size)
+        #fae.delta(-step_size, 0, 0, step_size)
+        fae.delta_pos(-step_size, 0, step_size)
     if direction == "up":
-        fae.delta(-step_size, -step_size, -step_size, -step_size)
+        #fae.delta(-step_size, -step_size, -step_size, -step_size)
+        fae.delta_pos(0, step_size, 0)
     if direction == "down":
-        fae.delta(step_size, step_size, step_size, step_size)
+        #fae.delta(step_size, step_size, step_size, step_size)
+        fae.delta_pos(0, -step_size, 0)
     mtime("delta")
     fae.speed_given_speed(speed)
     mtime("speed")
@@ -556,12 +579,12 @@ def record(request_values):
             q = p[1]
             pos = p[2]
             s += f" {q.scalar} {q.x} {q.y} {q.z} {pos[0]} {pos[1]} {pos[2]}\n"
-            print(s)
+            #print(s)
             f.write(s)
         #f.write("m " + str(current_time) + " " + " ".join([str(s) for s in speeds]) + "\n")
         for mp in mposes:
             s = "f " + str(mp)+"\n"
-            print(s)
+            #print(s)
             f.write(s)
         if not fae.stopped:
             f.write("m " + str(current_time) + " " + " ".join([str(s) for s in speeds]) + "\n")
