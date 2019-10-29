@@ -1,0 +1,25 @@
+clamp_control: Clamp control. Receive number through serial 56K to move servo to position
+control: Hopefully the up to date fare-bot controller
+control_no_target: A simpler controler that only receives speeds from serial
+single_test: debug program using only one module on ports 8(dir)/9(pulse)
+
+
+
+
+General protocol for motor control:
+
+All text for easy debug
+Non command characters are ignored and dismissed until a command character is read. If a command requires arguments, they are read as space-separated strings and parsed.
+
+Command characters (lowercase):
+s = Stop. All motors stop immediately.
+g = Go. Execute the instructions previously sent.
+m <ID> <speed> = sets the speed of motor #<ID> to <speed>. Speed units depend on the controller version. Currently it is the period between istate changes of the PULSE output, in microseconds.
+z = Zero. Resets all the positions counters to the current position.
+p = Position. Prints the position on the serial as a series of 4 space separated integers, ended with a /n newline.
+e = Check speed. Prints the speeds of all the motors as a series of 4 space separated integers.
+c = Check target. Prints the target position on the serial.
+n <winch1> <winch2> <winch3> <winch4> = New Target. Sets a position target.
+r = Check resets. Prints the current time and the number of long cycle resets (debug only)
+o <mode> = mode. 0: speed mode. 1:target mode.
+f <period> = feedback. Every <periosd> milliseconds, the current winch positions are printed on the serial. 0 to deactivate
