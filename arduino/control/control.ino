@@ -138,11 +138,11 @@ void loop() {
       Serial.print(current_time);
       Serial.println(reset_counts);
     }
-    if(c=='p') {           // Motor <ID> <speed>
+    if(c=='p') {     
       mode = Serial.parseInt();
       if(mode!=0) mode=1;
     }
-    if(c=='f') {           // Motor <ID> <speed>
+    if(c=='f') {     
       feedback_period = Serial.parseInt()*1000;
     }
   }
