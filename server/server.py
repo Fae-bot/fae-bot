@@ -21,6 +21,12 @@ from random import randint, uniform
 from http.server import HTTPServer, BaseHTTPRequestHandler, HTTPStatus
 import socketserver
 import re
+from fae.inference import InferenceModel
+
+
+import numpy as np
+import keras
+from keras.models import load_model
 
 timer = dt.now()
 fae_vision=None
@@ -94,6 +100,7 @@ class FaeHttpHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         return self.do_answer()
+
 
 class FaeVision:
     ARTK_PATH = "../../artoolkit5/bin/simpleLite"
@@ -177,6 +184,7 @@ class Fae:
         self.rlock = Lock()
         self.stopped = False
         self.motor_poses = list()
+        self.model = InferenceModel("../notebooks/models/fae.mmp.20191025.bin")
 
 
         # Connect to the USB serial
@@ -318,10 +326,33 @@ class Fae:
             self.slock.release()
 
     def delta(self, d1, d2, d3, d4):
-        self.sync()
         self.target(self.lastPos[0] + d1, self.lastPos[1] + d2, self.lastPos[2] + d3, self.lastPos[3] + d4)
 
+    def delta_pos(self, dx, dy, dz):
+        global fae_vision
+        if fae_vision is not None:
+            fae_vision.slock.acquire()
+            last_pose = fae_vision.poses[-1]
+            fae_vision.slock.release()
+            q = last_pose[1]
+            newpos = [last_pose[2][0]+dx, last_pose[2][1]+dy, last_pose[2][2]+dz]
+            last_pose = [q.scalar, q.x, q.y, q.z] + last_pose[2]
+            target = self.model.inference(np.array([last_pose + newpos]))
+        self.zero()
+        self.target(*target)
+        self.mode(1)
+        self.go()
+
+    def mode(self, mode):
+        cmd = "p " + str(mode) + "\n"
+        self.slock.acquire()
+        self.serial.write(cmd)
+        self.serial.flush()
+        self.slock.release()
+        print(cmd)
+
     def set_pos(self, pos):
+        # Does not work anymore
         self.lastPos = pos
         cmd="z "+" ".join([str(x) for x in pos])+"\n"
         self.slock.acquire()
@@ -330,6 +361,14 @@ class Fae:
         self.slock.release()
         print(cmd)
         #self.sync()
+
+    def zero(self):
+        cmd = "z \n"
+        self.slock.acquire()
+        self.serial.write(cmd)
+        self.serial.flush()
+        self.slock.release()
+        print(cmd)
 
     def speed_given_time(self, ttt):  # ttt = time to target, in milliseconds
         self.sync()
