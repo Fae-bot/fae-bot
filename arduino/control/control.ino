@@ -75,7 +75,7 @@ void loop() {
           }
           if(targets[i]<positions[i]){
             directions[i]=-1;
-            digitalWrite(128-i*2, LOW);          // Not necessary every cycle
+            digitalWrite(8-i*2, LOW);          // Not necessary every cycle
           }
           if(targets[i]==positions[i]){
             cycle_length[i]=0;
@@ -147,4 +147,3 @@ void loop() {
     }
   }
 }
-
