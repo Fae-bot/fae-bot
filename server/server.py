@@ -173,12 +173,19 @@ def read_line_serial(ser):
     while True:
         try:
             line = ser.readline().decode("utf-8")
+            #print(line)
             if fae_vision is not None:
                 current_time=fae_vision.current_time
-                fae.motor_poses.append(str(current_time)+" "+line)
+            else:
+                current_time=-1
+            fae.rlock.acquire()
+            fae.motor_poses.append(str(current_time)+" "+line)
 
         except serial.serialutil.SerialException:
             pass
+        finally:
+            fae.rlock.release()
+
 
 class Fae:
     def __init__(self):
@@ -396,8 +403,11 @@ class Fae:
         self.motors_speed(*speeds)
 
     def speed_given_speed(self, speed):
-        self.sync()
-        d = [self.targetPos[i] - self.lastPos[i] for i in range(self.numMotors)]
+        self.rlock.acquire()
+        lastpos = [int(x) for x in self.motor_poses[-1].rstrip().split(" ")[1:]]
+        self.rlock.release()
+        #d = [self.targetPos[i] - self.lastPos[i] for i in range(self.numMotors)]
+        d = [self.targetPos[i] - lastpos[i] for i in range(self.numMotors)]
         sq = 0
         for dd in d:
             sq += float(dd**2)
@@ -491,42 +501,66 @@ def go_target(tid, request_values):
 @route('/direction/([^\/]*)', methods=['POST'])
 def move_direction(direction, request_values):
     global fae
+    print("MOVE!"*8)
     mtimereset()
     fae.stop()
     mtime("stop")
     speed = float(request_values.get('speed'))
     step_size = float(request_values.get('stepsize'))
+    ml_mode = request_values.get('ml_mode')=="true"
+    print(ml_mode)
+    print(request_values.get('ml_mode'))
 
     if direction == "n":
-        #fae.delta(step_size, step_size, -step_size, -step_size)
-        fae.delta_pos(0, 0, -step_size)
+        if not ml_mode:
+            fae.delta(step_size, step_size, -step_size, -step_size)
+        else:
+            fae.delta_pos(0, 0, -step_size)
     if direction == "s":
-        #fae.delta(-step_size, -step_size, step_size, step_size)
-        fae.delta_pos(0, 0, step_size)
+        if not ml_mode:
+            fae.delta(-step_size, -step_size, step_size, step_size)
+        else:
+           fae.delta_pos(0, 0, step_size)
     if direction == "w":
-        #fae.delta(-step_size, step_size, -step_size, step_size)
-        fae.delta_pos(-step_size, 0, 0)
+        if not ml_mode:
+            fae.delta(-step_size, step_size, -step_size, step_size)
+        else:
+            fae.delta_pos(-step_size, 0, 0)
     if direction == "e":
-        #fae.delta(step_size, -step_size, step_size, -step_size)
-        fae.delta_pos(step_size, 0, 0)
+        if not ml_mode:
+            fae.delta(step_size, -step_size, step_size, -step_size)
+        else:
+            fae.delta_pos(step_size, 0, 0)
     if direction == "nw":
-        #fae.delta(0, step_size, -step_size, 0)
-        fae.delta_pos(-step_size, 0, -step_size)
+        if not ml_mode:
+            fae.delta(0, step_size, -step_size, 0)
+        else:
+            fae.delta_pos(-step_size, 0, -step_size)
     if direction == "ne":
-        #fae.delta(step_size, 0, 0, -step_size)
-        fae.delta_pos(step_size, 0, -step_size)
+        if not ml_mode:
+            fae.delta(step_size, 0, 0, -step_size)
+        else:
+            fae.delta_pos(step_size, 0, -step_size)
     if direction == "se":
-        #fae.delta(0, -step_size, step_size, 0)
-        fae.delta_pos(step_size, 0, step_size)
+        if not ml_mode:
+            fae.delta(0, -step_size, step_size, 0)
+        else:
+            fae.delta_pos(step_size, 0, step_size)
     if direction == "sw":
-        #fae.delta(-step_size, 0, 0, step_size)
-        fae.delta_pos(-step_size, 0, step_size)
+        if not ml_mode:
+            fae.delta(-step_size, 0, 0, step_size)
+        else:
+            fae.delta_pos(-step_size, 0, step_size)
     if direction == "up":
-        #fae.delta(-step_size, -step_size, -step_size, -step_size)
-        fae.delta_pos(0, step_size, 0)
+        if not ml_mode:
+            fae.delta(-step_size, -step_size, -step_size, -step_size)
+        else:
+            fae.delta_pos(0, step_size, 0)
     if direction == "down":
-        #fae.delta(step_size, step_size, step_size, step_size)
-        fae.delta_pos(0, -step_size, 0)
+        if not ml_mode:
+            fae.delta(step_size, step_size, step_size, step_size)
+        else:
+            fae.delta_pos(0, -step_size, 0)
     mtime("delta")
     fae.speed_given_speed(speed)
     mtime("speed")
@@ -538,8 +572,8 @@ def move_direction(direction, request_values):
 @route('/randomize', methods=['POST'])
 def randomize(request_values):
     segDur = float(request_values.get('segDur'))
-    numSegs = float(request_values.get('numSegs'))
-    numCyc = float(request_values.get('numCyc'))
+    numSegs = int(request_values.get('numSegs'))
+    numCyc = int(request_values.get('numCyc'))
 
 
     # Make <numCyc> cycles of <numSegs> random moves of <segDur> sec
@@ -549,26 +583,26 @@ def randomize(request_values):
 
     for c in range(numCyc):
         # Go back to zero
+        fae.motors_speed(*([max_speed]*4))
         fae.target(0, 0, 0, 0)
         fae.mode(1)
         fae.go()
+        print("Rand cycle #"+str(c))
         finished = False
         # Wait for the movement toward 0 to finish
         while not finished:
+            print("Zeroing")
             sleep(1)
-            try:
-                fae.slock.acquire()
-                fae.serial.write("p\r\n")
-                fae.serial.flush()
-                line = fae.serial.readline().decode("utf-8")
-                pos = [int(x) for x in line.rstrip("\n\r ").split(" ")]
-                print("SYNC "+str(pos))
-            finally:
-                fae.slock.release()
+            fae.rlock.acquire()
+            pos = [int(x) for x in fae.motor_poses[-1].rstrip().split(" ")[1:]]
+            fae.rlock.release()
+            print("pos = "+str(pos))
             if pos[0] == 0 and pos[1] == 0 and pos[2] == 0 and pos[3] == 0:
                 finished = True
-        
+        fae.mode(0) 
+        print("Segments")
         for k in range(numSegs):
+            print("Seg #"+str(k))
             motors_speed = list()
             for im in range(4):
                 v = uniform(max_speed, 3 * max_speed)
@@ -580,6 +614,14 @@ def randomize(request_values):
             if fae.stopped:
                 break
             fae.stop()
+        if fae.stopped:
+            break
+        fae.stop()
+    # Final zeoing
+    fae.motors_speed(*([max_speed]*4))
+    fae.target(0, 0, 0, 0)
+    fae.mode(1)
+    fae.go()
     return ""
 
 

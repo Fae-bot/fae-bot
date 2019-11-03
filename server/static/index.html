@@ -24,9 +24,8 @@ function refresh_image() {
 function post(url, args=null) {
 	content = "stepsize="+stepSizeValue+"&speed="+speedValue
 	if(args) {
-		content = "";
 		for (var key in args) {
-			content+=key+"="+args[key].toString()+"&";
+			content+="&"+key+"="+args[key].toString();
 		}
 
 	}
@@ -71,7 +70,7 @@ var stepSizeValue;
 var speedValue =300;
 function updateValue() {
 	var multiplierStepSize = 50;
-	var multiplierSpeed = 5;
+	var multiplierSpeed = 15;
 	var thresholdSpeed = 5;
 
 	sliderSize = document.getElementById('stepSize');
@@ -173,24 +172,26 @@ div.button-grid { width:90%; font-size: 32px; background-color: #aaffaa; }
 <div><input id="speed" type="range" onmousemove="updateValue()" ontouchmove="updateValue()" min="1" max="200" value="140"/></div>
 
 <div class='directions-control'>
+	Machine Learning Mode <input id="ml_mode" type=checkbox value="Machine Learning Mode?">
 <table width=100%>
 	<tr>
-		<td><div onClick='post("direction/nw")' class='button-dark'>&#8662;</div></td>
-		<td><div onClick='post("direction/n")' class='button-light'>&#x21D1;</div></td>
-		<td><div onClick='post("direction/ne")' class='button-dark'>&#x21D7;</div></td>
-		<td><div onClick='post("direction/up")' class='button-light'>UP</div></td>
+		<td><div onClick='post("direction/nw", {"ml_mode": d("ml_mode").checked})' class='button-dark'>&#8662;</div></td>
+		<td><div onClick='post("direction/n", {"ml_mode": d("ml_mode").checked})' class='button-light'>&#x21D1;</div></td>
+		<td><div onClick='post("direction/ne", {"ml_mode": d("ml_mode").checked})' class='button-dark'>&#x21D7;</div></td>
+		<td><div onClick='post("direction/up", {"ml_mode": d("ml_mode").checked})' class='button-light'>UP</div></td>
+		
 	</tr>
 	<tr>
-		<td><div onClick='post("direction/w")' class='button-light'>&#x21D0;</div></td>
+		<td><div onClick='post("direction/w", {"ml_mode": d("ml_mode").checked})' class='button-light'>&#x21D0;</div></td>
 		<td><div onClick='post("stop")' class='button-stop'>X</div></td>
-		<td><div onClick='post("direction/e")' class='button-light'>&#x21D2;</div></td>
+		<td><div onClick='post("direction/e", {"ml_mode": d("ml_mode").checked})' class='button-light'>&#x21D2;</div></td>
 		<td><div class="debug" id="debugPos">-</div></td>
 	</tr>
 	<tr>
-		<td><div onClick='post("direction/sw")' class='button-dark'>&#x21D9;</div></td>
-		<td><div onClick='post("direction/s")' class='button-light'>&#x21D3;</div></td>
-		<td><div onClick='post("direction/se")' class='button-dark'>&#x21D8;</div></td>
-		<td><div onClick='post("direction/down")' class='button-dark'>DOWN</div></td>
+		<td><div onClick='post("direction/sw", {"ml_mode": d("ml_mode").checked})' class='button-dark'>&#x21D9;</div></td>
+		<td><div onClick='post("direction/s", {"ml_mode": d("ml_mode").checked})' class='button-light'>&#x21D3;</div></td>
+		<td><div onClick='post("direction/se", {"ml_mode": d("ml_mode").checked})' class='button-dark'>&#x21D8;</div></td>
+		<td><div onClick='post("direction/down", {"ml_mode": d("ml_mode").checked})' class='button-dark'>DOWN</div></td>
 	</tr>
 </table>
 </div>
