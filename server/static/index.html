@@ -21,11 +21,19 @@ function refresh_image() {
   forcerefresh=forcerefresh+1;
 }
 
-function post(url) {
+function post(url, args=null) {
+	content = "stepsize="+stepSizeValue+"&speed="+speedValue
+	if(args) {
+		content = "";
+		for (var key in args) {
+			content+=key+"="+args[key].toString()+"&";
+		}
+
+	}
 	var xhr = new XMLHttpRequest();
 	xhr.open("POST", url, true);
 	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-	xhr.send("stepsize="+stepSizeValue+"&speed="+speedValue);
+	xhr.send(content);
 }
 
 function postsimple(url) {
@@ -55,8 +63,12 @@ function set_target(i) {
 
 }
 
+function d(id){
+	return document.getElementById(id);
+}
+
 var stepSizeValue;
-var speedValue;
+var speedValue =300;
 function updateValue() {
 	var multiplierStepSize = 50;
 	var multiplierSpeed = 5;
@@ -67,9 +79,11 @@ function updateValue() {
 	sliderSpeed = document.getElementById('speed');
 	labelSpeed = document.getElementById('speedDisplay');
 	stepSizeValue = sliderSize.value*multiplierStepSize;
+	if(sliderSpeed.value){
 	speedValue = sliderSpeed.value;
-	if(speedValue > 100){
-		speedValue = 100 + (speedValue-100) * multiplierSpeed;
+		if(speedValue > 100){
+			speedValue = 100 + (speedValue-100) * multiplierSpeed;
+		}
 	}
 
 	labelSize.innerHTML = 'Step size = '+stepSizeValue;
@@ -300,7 +314,17 @@ div.button-grid { width:90%; font-size: 32px; background-color: #aaffaa; }
 			<div class='button-light' onClick='post("/motors/2/unroll")'>UNROLL</div>
 		</div>
 </div>
-<div width="100%"><span onClick='post("randomize")' class='button-stop' width="100%">RANDOM MOVE</span></div>
+
+	<div>Segment duration:<input type="text" id="segDur" value="3"></div>
+	<div>Segments per cycle:<input type="text" id="numSegs" value="12"></div>
+	<div>Cycles:<input type="text" id="numCyc" value="10"></div>
+
+	<div width="100%"><span onClick='post("randomize",
+										  {"segDur": d("segDur").value,
+										   "numSegs": d("numSegs").value,
+										   "numCyc": d("numCyc").value,
+										   "speed": speedValue})' class='button-stop' width="100%">RANDOM MOVE</span>
+	</div>
 <div width="100%"><span onClick='post("record")' class='button-stop' width="100%">RECORD</span></div>
 <div width="100%"><span onClick='post("stop_record")' class='button-stop' width="100%">STOP RECORD</span></div>
 </body>

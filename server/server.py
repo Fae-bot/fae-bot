@@ -83,8 +83,9 @@ class FaeHttpHandler(BaseHTTPRequestHandler):
                     post_data = self.rfile.read(content_length).decode("ascii")
                     print(post_data)
                     for eq in post_data.split("&"):
-                        k, v = eq.split("=")
-                        values[k]=v
+                        if "=" in eq:
+                            k, v = eq.split("=")
+                            values[k]=v
 
                 if "POST" in handlers_dict[p][1]:
                     print(values)
@@ -95,7 +96,10 @@ class FaeHttpHandler(BaseHTTPRequestHandler):
                 # self.send_header("Content-type", "text/html;charset=utf-8")
                 self.send_header("Content-Length", str(len(answer)))
                 self.end_headers()
-                self.wfile.write(answer.encode("ascii"))
+                if isinstance(answer, str):
+                    self.wfile.write(answer.encode("ascii"))
+                if isinstance(answer, bytes):
+                    self.wfile.write(answer)
                 return
 
     def do_GET(self):
@@ -420,7 +424,7 @@ def index():
 @route('/static/(.*)')
 def serve_static_file(path):
     # TODO: paths are not jailed in /static/
-    return open("static/"+path).read()
+    return open("static/"+path, "rb").read()
 
 
 @route('/motors/([^\/]*)/roll', methods=['POST'])
@@ -533,21 +537,49 @@ def move_direction(direction, request_values):
 
 @route('/randomize', methods=['POST'])
 def randomize(request_values):
-    # Make 12 random moves of 3.0 sec
+    segDur = float(request_values.get('segDur'))
+    numSegs = float(request_values.get('numSegs'))
+    numCyc = float(request_values.get('numCyc'))
+
+
+    # Make <numCyc> cycles of <numSegs> random moves of <segDur> sec
     fae.stopped = False
     max_speed = float(request_values.get('speed'))
-    for k in range(12):
-        motors_speed = list()
-        for im in range(4):
-            v = uniform(max_speed, 3 * max_speed)
-            v *= randint(0, 1)*2 - 1
-            motors_speed.append(v)
-        fae.motors_speed(*motors_speed)
+    fae.zero()
+
+    for c in range(numCyc):
+        # Go back to zero
+        fae.target(0, 0, 0, 0)
+        fae.mode(1)
         fae.go()
-        sleep(3.0)
-        if fae.stopped:
-            break
-        fae.stop()
+        finished = False
+        # Wait for the movement toward 0 to finish
+        while not finished:
+            sleep(1)
+            try:
+                fae.slock.acquire()
+                fae.serial.write("p\r\n")
+                fae.serial.flush()
+                line = fae.serial.readline().decode("utf-8")
+                pos = [int(x) for x in line.rstrip("\n\r ").split(" ")]
+                print("SYNC "+str(pos))
+            finally:
+                fae.slock.release()
+            if pos[0] == 0 and pos[1] == 0 and pos[2] == 0 and pos[3] == 0:
+                finished = True
+        
+        for k in range(numSegs):
+            motors_speed = list()
+            for im in range(4):
+                v = uniform(max_speed, 3 * max_speed)
+                v *= randint(0, 1)*2 - 1
+                motors_speed.append(v)
+            fae.motors_speed(*motors_speed)
+            fae.go()
+            sleep(segDur)
+            if fae.stopped:
+                break
+            fae.stop()
     return ""
 
 

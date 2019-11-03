@@ -113,6 +113,16 @@ def create_training_pairs(ticks, poses):
     return pairs
 
 
+def turn_pairs_into_delta(pairs):
+    for p in pairs:
+        x1, y1, z1 = p[4:7]
+        x2, y2, z2 = p[-3:]
+        p[-3] = x2-x1
+        p[-2] = y2 - y1
+        p[-1] = z2 - z1
+    return pairs
+
+
 def normalize_columns(arr, cols=[]):
     norm_factors=list()
     for c in cols:
@@ -161,7 +171,7 @@ def load_dataset_mmp(dirname, shuffle=True, return_scale_parameters=False):
     pairs = list()
     for f in os.listdir(dirname):
         t, p = parse_file(dirname + f)
-        pairs += create_training_pairs(t, p)
+        pairs += turn_pairs_into_delta(create_training_pairs(t, p))
     if shuffle:
         random.seed(0)  # Makes sure the shuffling is deterministic
         random.shuffle(pairs)
