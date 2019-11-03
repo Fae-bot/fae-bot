@@ -1,0 +1,6 @@
+- Decorrelate the artoolkit from the recording (can be used for the ML mode as well)
+- Make artoolkit continue to track even out of focus
+- Totally solve the stop during randomize thing
+- Solve the mode problem after a stop during randomize
+- Make a zeroing button
+- Show current motor pos/AR pose
